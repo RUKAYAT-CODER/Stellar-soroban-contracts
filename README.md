@@ -1,206 +1,189 @@
+# ✺ MERIDIAN
+> *Where real-world effort meets on-chain value. Work. Earn. Grow.*
 
+---
 
-(Stellar Soroban Contracts – Insurance Logic)
+## What is MERIDIAN?
 
-Stellar Insured 🧠 — Soroban Smart Contracts
+MERIDIAN is a **productivity-powered on-chain economy** built on the Stellar blockchain. It transforms the work you already do — focus sessions, streaks, daily consistency — into verifiable on-chain progression, streaming payroll, and yield-backed rewards.
 
-This repository contains the core insurance smart contracts for Stellar Insured, written using Stellar Soroban. These contracts power policy issuance, claims processing, settlements, risk pools, and DAO governance in a fully decentralized and trustless manner.
+No speculation. No trading. Just effort, rewarded.
 
-They are intended for policyholders, DAO members, auditors, and developers who require transparent, immutable, and verifiable insurance logic deployed on the Stellar blockchain.
+Think of it as three things working as one:
 
-Project structure: see [structure.md](structure.md).
+- A **focus and habit engine** that turns deep work into XP and on-chain pet progression
+- A **payroll streaming protocol** that pays workers per second, not per month
+- A **no-loss reward pool** where consistent users compete for yield — never principal
 
-Architecture
-1. Policy Contract
-Manages insurance policy issuance, renewal, and lifecycle.
+Everything is connected through a single wallet, a single identity, and a unified on-chain economy on Stellar.
 
-Issue Policy: Create new insurance policies with coverage amounts and premiums
-Renew Policy: Extend policy duration before expiry
-Cancel Policy: Policyholder can cancel active policies
-Expire Policy: Mark policies as expired
-Key Functions:
+---
 
-initialize(admin, risk_pool) - Initialize contract
-issue_policy(holder, coverage_amount, premium_amount, duration_days, policy_type) - Issue new policy
-get_policy(policy_id) - Retrieve policy details
-renew_policy(policy_id, duration_days) - Renew existing policy
-cancel_policy(policy_id) - Cancel policy
-expire_policy(policy_id) - Mark as expired
-get_stats() - Get contract statistics
-2. Claims Contract
-Processes insurance claims with deterministic multi-stage approval workflow.
+## Why Stellar?
 
-Submit Claim: Policyholders submit claims with evidence (Submitted status)
-Start Review: Admin moves claim to review stage (UnderReview status)
-Approve/Reject Claim: Admin approves valid claims or rejects invalid ones (Approved/Rejected status)
-Settle Claim: Release funds to claimant for approved claims only (Settled status)
-Multi-Stage Workflow:
+MERIDIAN is purpose-built on Stellar because the chain was built for real people and real payments:
 
-Submitted → UnderReview → Approved/Rejected → Settled (Approved only)
-State Transition Rules:
+- **⚡ Fast** — 3–5 second finality, sessions and payroll confirmed instantly
+- **💸 Near-zero fees** — micro-rewards and per-second streaming are only viable here
+- **🌍 Global** — designed for the underbanked and emerging markets from day one
+- **🦀 Smart** — Soroban brings expressive Rust contracts to power complex logic
+- **🤝 Native assets** — XLM and custom tokens flow without bridges or wrappers
 
-Only admin can transition claims between states
-Claims can only be settled if approved (prevents premature settlement)
-Full state validation prevents invalid transitions
-Key Functions:
+---
 
-initialize(admin, policy_contract, risk_pool) - Initialize contract
-submit_claim(policy_id, amount) - Submit new claim (sets status to Submitted)
-start_review(claim_id) - Admin moves claim to UnderReview status
-get_claim(claim_id) - Retrieve claim details with status
-approve_claim(claim_id) - Admin approves UnderReview claims (sets to Approved)
-reject_claim(claim_id) - Admin rejects UnderReview claims (sets to Rejected)
-settle_claim(claim_id) - Settle approved claims only, integrates with risk pool
-get_stats() - Get claims statistics
-3. Risk Pool Contract
-Manages liquidity pool for claims settlement.
+## The Three Pillars
 
-Deposit Liquidity: Providers deposit XLM to earn rewards
-Withdraw Liquidity: Withdraw staked amounts
-Reserve Liquidity: Lock funds for pending claims
-Release Liquidity: Return reserved funds after settlement
-Key Functions:
+---
 
-initialize(admin, xlm_token, min_provider_stake) - Initialize pool
-deposit_liquidity(provider, amount) - Deposit into pool
-withdraw_liquidity(provider, amount) - Withdraw from pool
-payout_claim(recipient, amount) - Pay out approved claims (admin only)
-get_pool_stats() - Pool statistics
-get_provider_info(provider) - Provider stake info
-5. Slashing Contract
-Professional on-chain slashing mechanism to penalize malicious or negligent actors.
+### 01 — FOCUS
+*Turn deep work into on-chain progression.*
 
-Slashable Roles: Oracle providers, claim submitters, governance participants, risk pool providers
-Configurable Penalties: DAO-controlled penalty percentages and multipliers
-Fund Redirection: Slashed funds redirected to risk pool, treasury, or compensation fund
-Repeat Offender System: Progressive penalties for multiple violations
-Cooldown Periods: Time-based protection against excessive slashing
-Key Functions:
+Set a focus timer — 10, 25, or 45 minutes — and stay present. When the session ends, your on-chain companion receives XP and your streak is preserved. Neglect it and health decays. Nurture it and watch it evolve through five stages — Egg, Baby, Teen, Adult, Elder — driven purely by real-world consistency.
 
-initialize(admin, governance_contract, risk_pool_contract) - Initialize with governance integration
-configure_penalty_parameters(role, reason, percentage, destination, multiplier, cooldown) - Set penalty rules
-slash_funds(target, role, reason, amount) - Execute slashing with validation
-add_slashable_role(role) / remove_slashable_role(role) - Manage slashable roles
-get_slashing_history(target, role) - View violation history
-get_violation_count(target, role) - Check repeat offenses
-can_be_slashed(target, role) - Verify slashing eligibility
-pause() / unpause() - Emergency controls
-4. Governance Contract
-Professional DAO proposal system enabling decentralized protocol decisions.
+**Key mechanics:**
+- XP earned per session, recorded on-chain via Soroban contract
+- Pet health decays every 24 hours — daily effort is required to maintain progress
+- Streak bonuses add XP multipliers for consecutive daily sessions
+- Night owl bonus (midnight–6 AM) applies a 1.1x XP multiplier
+- Supercharge mode streams XLM to a community yield pool in real time — pausing health decay and boosting XP
 
-Proposal Creation: Create detailed proposals with title, description, and execution data
-Voting Period Enforcement: Strict time-based voting with configurable periods
-Proposal Storage Schema: Efficient storage using Soroban-compatible data structures
-Read-only Queries: Comprehensive query functions for proposal data and statistics
-Key Functions:
+**Supercharge tiers:**
 
-initialize(admin, token_contract, voting_period_days, min_voting_percentage, min_quorum_percentage, slashing_contract) - Initialize with quorum requirements
-create_proposal(title, description, execution_data, threshold_percentage) - Create detailed proposal
-get_proposal(proposal_id) - Retrieve full proposal details
-vote(proposal_id, vote_weight, is_yes) - Cast vote with duplicate prevention
-finalize_proposal(proposal_id) - Finalize after voting period with quorum/threshold checks
-execute_proposal(proposal_id) - Execute passed proposals
-create_slashing_proposal(target, role, reason, amount, evidence, threshold) - Create slashing proposals
-execute_slashing_proposal(proposal_id) - Execute approved slashing actions
-get_active_proposals() - Query all active proposals
-get_proposal_stats(proposal_id) - Get voting statistics
-get_all_proposals() - List all proposals
-get_vote_record(proposal_id, voter) - Check individual voting records
-✨ Contract Features
+| Tier | Rate | XP Multiplier |
+|---|---|---|
+| Gentle Flow | 1 XLM/mo | 1.2x |
+| Power Surge | 5 XLM/mo | 1.4x |
+| Max Overdrive | 10 XLM/mo | 1.7x |
 
-- Insurance policy creation and lifecycle management
-- Automated claim validation and settlement
-- Decentralized risk pool accounting
-- Professional DAO governance with quorum and threshold requirements
-- On-chain slashing mechanism with configurable penalties
-- Secure and deterministic execution via Soroban PRNG
-- Capped bridge history to prevent storage explosion
-- Emergency pause mechanism in escrow and bridge contracts
+**Shop** — spend earned tokens on food, shields, energy drinks, revivals, and cosmetics. 10% of all shop transactions flow to the community yield pool.
 
-🧑‍💻 Tech Stack
+---
 
-- Blockchain: Stellar
-- Smart Contracts: Soroban
-- Language: Rust
-- SDK: soroban-sdk (v20.0.0)
+### 02 — STREAM
+*Payroll that flows like water — per second, not per month.*
 
-📁 Project Structure
+MERIDIAN Stream is a payroll streaming protocol for the Stellar ecosystem. Employers deposit stablecoins and open a payment stream. Employees accrue earnings every second and withdraw at any time — no waiting for month-end, no banking delays, no middlemen.
+
+Built for the millions of gig workers, freelancers, and remote employees in emerging markets who can't afford to wait 30 days to access money they've already earned.
+
+**How it works:**
+1. Employer deposits funds into a MERIDIAN Stream vault (Soroban contract)
+2. A per-second stream rate is set per employee
+3. Employees see their balance tick up in real time and withdraw anytime
+4. Sub-cent transaction fees on Stellar make micro-withdrawals practical
+
+**Supported assets:** XLM, USDC (Stellar), and any Stellar-issued stablecoin
+
+---
+
+### 03 — POOL
+*A no-loss prize pool for consistent contributors.*
+
+Every week, MERIDIAN aggregates XP earned across the network. The top performers earn entries into a yield lottery — funded by the community supercharge streams and shop fees. The yield goes to one winner. The principal stays with everyone.
+
+No one loses their stake. Ever.
+
+| Rank | Reward |
+|---|---|
+| Top 5 | Trophy NFT (Soroban-minted, monthly) |
+| Pool winner | Full weekly yield payout |
+| All participants | Principal fully preserved |
+
+---
+
+## Identity & Trust
+
+Users who complete identity verification receive a verified badge on their leaderboard profile. Verification uses a privacy-preserving proof — no biometric data is stored by MERIDIAN. Verified users receive bonus XP multipliers and appear distinctly on the global leaderboard.
+
+The leaderboard is fully public. No wallet required to view rankings, pet stages, streaks, or verified status.
+
+---
+
+## Tech Stack
+
+| Layer | Technology |
+|---|---|
+| Frontend | Next.js 15 (App Router), React 19, Tailwind v4 |
+| Auth | Stellar Wallets Kit + embedded wallet support |
+| Blockchain | Stellar Network |
+| Contracts | Rust — Soroban smart contracts |
+| Payment streaming | Stellar payment channels + Soroban vault contracts |
+| Backend | Supabase (leaderboard, session sync) |
+| Notifications | Web Push API + scheduled triggers |
+| Animations | Framer Motion |
+
+---
+
+## Smart Contracts (Soroban / Rust)
+
+```
 contracts/
-├── bridge/ - Cross-chain property bridge (Soroban)
-├── escrow/ - Advanced escrow system (Soroban)
-├── lib/ - Shared utilities (Randomness, etc.)
-└── ... (Other contracts being migrated)
+├── focus_engine/       ← XP computation, session recording, pet state
+├── stream_vault/       ← Payroll deposit, per-second streaming, withdrawals
+├── prize_pool/         ← Yield aggregation, lottery resolution, NFT minting
+├── shop/               ← Item purchases, fee routing to pool
+└── identity/           ← Verified badge management
+```
 
-📦 Setup & Development Prerequisites
+All contracts are written in Rust, compiled to WASM, and deployed on Stellar Soroban. Open-source and fully auditable. No admin upgrade keys on core contracts.
 
-Rust (latest stable)
+---
 
-Stellar CLI
+## Project Structure
 
-Soroban SDK
+```
+meridian/
+├── contracts/          ← Soroban Rust contracts
+├── app/
+│   ├── src/
+│   │   ├── app/        ← Next.js App Router pages + API routes
+│   │   ├── components/ ← UI components (pet view, timer, stream dashboard)
+│   │   ├── hooks/      ← Stellar SDK + app-specific React hooks
+│   │   └── utils/      ← XP formulas, pet stage logic, stream calculators
+│   └── public/         ← Pet sprites, shop assets, icons
+└── sdk/                ← TypeScript helpers for integrators
+```
 
-Build Contracts cargo build --target wasm32-unknown-unknown --release
+---
 
-Run Tests cargo test
+## Getting Started
 
-🌐 Network Configuration
+```bash
+git clone https://github.com/your-org/meridian.git
+cd meridian/app
+cp .env.example .env.local
+npm install
+npm run dev
+```
 
-Network: Stellar Testnet
+**Required environment variables:** Stellar network config, Soroban RPC URL, Supabase URL + anon key, deployed contract addresses, WalletConnect project ID.
 
-Execution: Soroban VM
+---
 
-Wallets: Non-custodial Stellar wallets
+## Use Cases
 
-🔐 Security Considerations
+- **Remote workers** — get paid every second, withdraw when you need it
+- **Freelancers** — transparent, on-chain proof of work and payment
+- **Students & builders** — build focus habits and earn on-chain progression
+- **Communities** — run shared yield pools funded by collective productivity
+- **Emerging markets** — low-fee, real-time payroll where banking infrastructure is weak
 
-Deterministic execution
+---
 
-Multi-stage state transition validation preventing invalid claim flows
+## The Vision
 
-Admin-only authorization for all sensitive claim operations
+MERIDIAN exists for a simple reason — effort should be its own economy.
 
-Settlement prevention for non-approved claims
+The work you do every day has value. Your focus has value. Your consistency has value. MERIDIAN makes that value visible, portable, and rewarded — on a chain fast enough to keep up with real life.
 
-Explicit authorization checks
+---
 
-Auditable contract logic
+## Organization
 
-Minimal trusted off-chain assumptions
+**MERIDIAN** is maintained by a small core team and open to contributors across all three pillars. Each contract, each service, and each frontend module is independently contributable.
 
-📚 Resources
+Built on Stellar. Open by default. Rewarding by design.
 
-Soroban Docs: https://soroban.stellar.org/docs
+---
 
-Stellar Developers: https://developers.stellar.org
-
-Rust Docs: https://doc.rust-lang.org
-
-Deployment
-Build all contracts:
-cd contracts/policy && cargo build --release
-cd contracts/claims && cargo build --release
-cd contracts/risk_pool && cargo build --release
-cd contracts/governance && cargo build --release
-Deploy to Stellar network using Soroban CLI
-
-Initialize each contract with proper parameters
-
-Local sandbox orchestration:
-
-`stellar-insured-contracts/scripts/orchestrate-soroban.sh` deploys the Soroban stack in dependency order, initializes governance defaults, and primes the pool for local integration runs. See `stellar-insured-contracts/docs/soroban-orchestrator.md` for usage and override examples.
-
-Security Considerations
-Authorization: All sensitive operations require authentication
-State Validation: Comprehensive checks on contract state transitions
-Error Handling: Descriptive error codes for debugging
-Event Logging: All important actions emit events
-Rate Limiting: Consider implementing rate limits for production
-🤝 Contributing
-
-Fork the repository
-
-Create a contract-specific branch
-
-Add tests for all logic changes
-
-Submit a Pull Request
+MIT License
