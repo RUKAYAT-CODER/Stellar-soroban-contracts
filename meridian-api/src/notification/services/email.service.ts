@@ -11,6 +11,7 @@ export class EmailService {
         sgMail.setApiKey(process.env.SENDGRID_API_KEY || '');
     }
 
+    //method used to send mail
     async sendEmail(to: string, subject: string, html: string): Promise<void> {
         try {
             if (!process.env.SENDGRID_API_KEY) {
