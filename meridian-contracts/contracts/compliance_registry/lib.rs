@@ -295,6 +295,22 @@ mod compliance_registry {
     }
 
     #[ink(event)]
+    pub struct DataDeletionRejected {
+        #[ink(topic)]
+        account: AccountId,
+        timestamp: Timestamp,
+    }
+
+    #[ink(event)]
+    pub struct DuplicateVerificationRequestRejected {
+        #[ink(topic)]
+        account: AccountId,
+        #[ink(topic)]
+        existing_request_id: u64,
+        timestamp: Timestamp,
+    }
+
+    #[ink(event)]
     pub struct AuditLogCreated {
         #[ink(topic)]
         account: AccountId,
@@ -782,6 +798,10 @@ mod compliance_registry {
 
             // Check if retention period has expired
             if !self.check_data_retention(account) {
+                self.env().emit_event(DataDeletionRejected {
+                    account,
+                    timestamp: self.env().block_timestamp(),
+                });
                 return Err(Error::DataRetentionExpired);
             }
 
@@ -880,6 +900,11 @@ mod compliance_registry {
             if let Some(existing_request_id) = self.account_requests.get(caller) {
                 if let Some(request) = self.verification_requests.get(existing_request_id) {
                     if request.status == VerificationStatus::Pending {
+                        self.env().emit_event(DuplicateVerificationRequestRejected {
+                            account: caller,
+                            existing_request_id,
+                            timestamp: self.env().block_timestamp(),
+                        });
                         return Err(Error::AlreadyVerified); // Request already pending
                     }
                 }
@@ -1427,6 +1452,66 @@ mod compliance_registry {
 
             // User is no longer compliant
             assert!(!contract.is_compliant(user));
+        }
+
+        #[ink::test]
+        fn request_data_deletion_emits_rejection_event_when_retention_active() {
+            let mut contract = ComplianceRegistry::new();
+            let user = AccountId::from([0x07; 32]);
+            let kyc_hash = [0u8; 32];
+
+            // Verify the user so compliance_data exists. US retention is 7 years,
+            // so data_retention_until will be far in the future relative to "now".
+            contract
+                .submit_verification(
+                    user,
+                    Jurisdiction::US,
+                    kyc_hash,
+                    RiskLevel::Low,
+                    DocumentType::Passport,
+                    BiometricMethod::None,
+                    10,
+                )
+                .expect("submit");
+
+            // request_data_deletion requires caller == account
+            ink::env::test::set_caller::<ink::env::DefaultEnvironment>(user);
+
+            // Retention period has not expired -> should fail with DataRetentionExpired
+            let result = contract.request_data_deletion(user);
+            assert_eq!(result, Err(Error::DataRetentionExpired));
+
+            // The failure should have emitted a DataDeletionRejected event
+            let emitted = ink::env::test::recorded_events().collect::<Vec<_>>();
+            let last = emitted.last().expect("an event should have been emitted");
+            let decoded: DataDeletionRejected = scale::Decode::decode(&mut &last.data[..])
+                .expect("event should decode as DataDeletionRejected");
+            assert_eq!(decoded.account, user);
+        }
+
+        #[ink::test]
+        fn create_verification_request_emits_duplicate_rejection_event() {
+            let mut contract = ComplianceRegistry::new();
+            let user = AccountId::from([0x08; 32]);
+
+            ink::env::test::set_caller::<ink::env::DefaultEnvironment>(user);
+
+            let first_id = contract
+                .create_verification_request(Jurisdiction::UK, [1u8; 32], [2u8; 32])
+                .expect("first request should succeed");
+
+            // Second request while the first is still Pending should fail
+            let result = contract.create_verification_request(Jurisdiction::UK, [3u8; 32], [4u8; 32]);
+            assert_eq!(result, Err(Error::AlreadyVerified));
+
+            // The rejection should have emitted a DuplicateVerificationRequestRejected event
+            let emitted = ink::env::test::recorded_events().collect::<Vec<_>>();
+            let last = emitted.last().expect("an event should have been emitted");
+            let decoded: DuplicateVerificationRequestRejected =
+                scale::Decode::decode(&mut &last.data[..])
+                    .expect("event should decode as DuplicateVerificationRequestRejected");
+            assert_eq!(decoded.account, user);
+            assert_eq!(decoded.existing_request_id, first_id);
         }
 
         // Issue #45: Enhanced compliance framework tests
