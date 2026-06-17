@@ -2,7 +2,8 @@ import { Module } from '@nestjs/common';
 import { ConfigModule, ConfigService } from '@nestjs/config';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { JwtModule } from '@nestjs/jwt';
-import { APP_INTERCEPTOR } from '@nestjs/core';
+import { ThrottlerModule, ThrottlerGuard } from '@nestjs/throttler';
+import { APP_INTERCEPTOR, APP_GUARD } from '@nestjs/core';
 import { DataSource } from 'typeorm';
 
 import { AppController } from './app.controller';
@@ -35,6 +36,16 @@ import { UploadModule } from './upload/upload.module';
       isGlobal: true,
       envFilePath: `.env.${process.env.NODE_ENV || 'development'}`,
     }),
+
+    /**
+     * RATE LIMITING CONFIG
+     */
+    ThrottlerModule.forRoot([
+      {
+        ttl: 60000,
+        limit: 10,
+      },
+    ]),
 
     /**
      * DATABASE CONFIG (Railway + Local Compatible)
@@ -94,6 +105,10 @@ import { UploadModule } from './upload/upload.module';
     {
       provide: APP_INTERCEPTOR,
       useClass: DataResponseInterceptor,
+    },
+    {
+      provide: APP_GUARD,
+      useClass: ThrottlerGuard,
     },
     AccessTokenGuard,
     MailProvider,

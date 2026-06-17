@@ -1,11 +1,10 @@
-import { Inject, Injectable, NotFoundException } from "@nestjs/common";
+import { Injectable, NotFoundException } from "@nestjs/common";
 import { Tweet } from "./dto/tweet.entity";
 import { Repository } from "typeorm";
 import { UserService } from "src/users/providers/user.services";
 import { CreateTweetDto } from "./dto/create-tweet.dto";
 import { InjectRepository } from "@nestjs/typeorm";
 import { UpdateTweetDto } from "./dto/update-tweet.dto";
-import { ExceptionsHandler } from "@nestjs/core/exceptions/exceptions-handler";
 
 
 @Injectable()
@@ -43,10 +42,6 @@ export class TweetService {
 
         let User = await this.userService.findOneById(createTweetDto.userId)
 
-        let Hashtags = []
-
-      
-
         let tweet = await this.tweetRepository.create({
             ...createTweetDto,
             user:User,
@@ -63,8 +58,12 @@ export class TweetService {
             id: updateTweetDto.id
         })
 
+        if (!tweet) {
+            throw new NotFoundException(`Tweet with id ${updateTweetDto.id} not found`);
+        }
+
         tweet.text = updateTweetDto.text || tweet.text
-        tweet.image = updateTweetDto.image
+        tweet.image = updateTweetDto.image || tweet.image
     
         return this.tweetRepository.save(tweet)
     }
@@ -78,4 +77,5 @@ export class TweetService {
 
         return {deleted: true, id}
     }
+
 }
