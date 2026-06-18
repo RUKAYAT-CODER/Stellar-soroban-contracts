@@ -4,6 +4,13 @@ import { Post } from 'src/post/post.entity';
 import { Tweet } from 'src/tweets/dto/tweet.entity';
 import { Entity, Column, PrimaryGeneratedColumn, OneToMany, OneToOne, JoinColumn } from 'typeorm';
 
+export enum UserRole {
+  SUPER_ADMIN = 'SUPER_ADMIN',
+  EMPLOYER = 'EMPLOYER',
+  FREELANCER = 'FREELANCER',
+  STUDENT = 'STUDENT',
+}
+
 @Entity()
 export class User {
   @PrimaryGeneratedColumn()
@@ -21,6 +28,13 @@ export class User {
   @Exclude()
   @Column("varchar" ,{nullable:false})
   password: string;
+
+  @Column({
+    type: 'enum',
+    enum: UserRole,
+    default: UserRole.FREELANCER,
+  })
+  role: UserRole;
 
   // doing a one to many releatinship btw users entity and post entity
   @OneToMany(() => Post, (posts) => posts.author)

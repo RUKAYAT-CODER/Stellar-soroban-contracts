@@ -10,6 +10,7 @@ import jwtConfig from './config/jwt.config';
 import { JwtModule } from '@nestjs/jwt';
 import { GenerateTokenProvider } from './providers/token.provider';
 import { RefreshTokenProvider } from './providers/refreshToken.provider';
+import { RolesGuard } from './guard/roles/roles.guard';
 
 
 
@@ -18,8 +19,8 @@ import { RefreshTokenProvider } from './providers/refreshToken.provider';
     JwtModule.registerAsync(jwtConfig.asProvider())
 
   ],
-  providers: [AuthService,GenerateTokenProvider,RefreshTokenProvider,{provide:HashingProvider,useClass:BcryptProvider}, SignInProviders],
+  providers: [AuthService,GenerateTokenProvider,RefreshTokenProvider,{provide:HashingProvider,useClass:BcryptProvider}, SignInProviders, RolesGuard],
   controllers: [AuthController],
-  exports:[AuthService,HashingProvider]
+  exports:[AuthService,HashingProvider,RolesGuard]
 })
 export class AuthModule {}

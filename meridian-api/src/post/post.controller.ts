@@ -1,10 +1,14 @@
-import { Body, Controller, DefaultValuePipe, Delete,Patch, Get, Param, ParseIntPipe, Post, Query, ValidationPipe } from '@nestjs/common';
+import { Body, Controller, DefaultValuePipe, Delete,Patch, Get, Param, ParseIntPipe, Post, Query, UseGuards, ValidationPipe } from '@nestjs/common';
 import { PostsService } from './provider/post.service';
 import { GetPostsParamDto } from 'src/DTO/postparamdto';
 import { CreatePostDto } from 'src/DTO/create-post.dto';
-import { ApiTags, ApiOperation, ApiResponse } from '@nestjs/swagger';
+import { ApiTags, ApiOperation, ApiResponse, ApiBearerAuth } from '@nestjs/swagger';
 import { PatchPostDto } from 'src/DTO/patch-post.dto';
 import { GetPostsDto } from 'src/DTO/getPostdto';
+import { AccessTokenGuard } from 'src/auth/guard/access-token/access-token.guard';
+import { RolesGuard } from 'src/auth/guard/roles/roles.guard';
+import { Roles } from 'src/auth/decorators/roles/roles.decorator';
+import { UserRole } from 'src/users/user.entity';
 
 
 @ApiTags('Posts')
@@ -38,6 +42,9 @@ export class PostController {
     @Delete()
     @ApiOperation({ summary: 'Delete a post' })
     @ApiResponse({ status: 200, description: 'Post deleted successfully' })
+    @UseGuards(AccessTokenGuard, RolesGuard)
+    @Roles(UserRole.SUPER_ADMIN, UserRole.EMPLOYER)
+    @ApiBearerAuth()
     public deleteOne(@Query('id', ParseIntPipe) id:number)  {
 
         return this.postService.deleteOne(id)
@@ -53,5 +60,4 @@ export class PostController {
     }
     
 }
-
 
