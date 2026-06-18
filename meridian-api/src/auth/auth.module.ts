@@ -1,4 +1,4 @@
-import { Module,forwardRef } from '@nestjs/common';
+import { Module, forwardRef } from '@nestjs/common';
 import { AuthService } from './providers/auth.service';
 import { AuthController } from './auth.controller';
 import { UsersModule } from 'src/users/users.module';
@@ -15,12 +15,20 @@ import { RolesGuard } from './guard/roles/roles.guard';
 
 
 @Module({
-  imports:[forwardRef(()=> UsersModule), ConfigModule.forFeature(jwtConfig),
-    JwtModule.registerAsync(jwtConfig.asProvider())
-
+  imports: [
+    forwardRef(() => UsersModule),
+    ConfigModule.forFeature(jwtConfig),
+    JwtModule.registerAsync(jwtConfig.asProvider()),
+    TypeOrmModule.forFeature([RefreshToken]),
   ],
-  providers: [AuthService,GenerateTokenProvider,RefreshTokenProvider,{provide:HashingProvider,useClass:BcryptProvider}, SignInProviders, RolesGuard],
+  providers: [
+    AuthService,
+    GenerateTokenProvider,
+    RefreshTokenProvider,
+    { provide: HashingProvider, useClass: BcryptProvider },
+    SignInProviders,
+  ],
   controllers: [AuthController],
-  exports:[AuthService,HashingProvider,RolesGuard]
+  exports: [AuthService, HashingProvider],
 })
 export class AuthModule {}

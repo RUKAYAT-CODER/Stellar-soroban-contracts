@@ -78,6 +78,8 @@ mod property_token {
         bridge_config: BridgeConfig,
         verified_bridge_hashes: Mapping<Hash, bool>,
         bridge_request_counter: u64,
+        /// O(1) lookup: tracks the active pending bridge request ID per token
+        token_pending_requests: Mapping<TokenId, u64>,
 
         // Standard counters
         total_supply: u64,
@@ -153,6 +155,7 @@ mod property_token {
                 bridge_config,
                 verified_bridge_hashes: Mapping::default(),
                 bridge_request_counter: 0,
+                token_pending_requests: Mapping::default(),
 
                 // Standard counters
                 total_supply: 0,
@@ -1289,6 +1292,7 @@ mod property_token {
             };
 
             self.bridge_requests.insert(request_id, &request);
+            self.token_pending_requests.insert(token_id, &request_id);
 
             self.env().emit_event(BridgeRequestCreated {
                 request_id,
@@ -1321,6 +1325,7 @@ mod property_token {
                 if u64::from(self.env().block_number()) > expires_at {
                     request.status = BridgeOperationStatus::Expired;
                     self.bridge_requests.insert(request_id, &request);
+                    self.token_pending_requests.remove(request.token_id);
                     return Err(Error::RequestExpired);
                 }
             }
@@ -1336,6 +1341,7 @@ mod property_token {
             // Update status based on approval and signatures collected
             if !approve {
                 request.status = BridgeOperationStatus::Failed;
+                self.token_pending_requests.remove(request.token_id);
                 self.env().emit_event(BridgeFailed {
                     request_id,
                     token_id: request.token_id,
@@ -1413,6 +1419,7 @@ mod property_token {
             // Update request status
             request.status = BridgeOperationStatus::Completed;
             self.bridge_requests.insert(request_id, &request);
+            self.token_pending_requests.remove(request.token_id);
 
             // Store transaction verification
             self.verified_bridge_hashes.insert(transaction_hash, &true);
@@ -1899,21 +1906,7 @@ mod property_token {
 
         /// Helper to check if token has pending bridge request
         fn has_pending_bridge_request(&self, token_id: TokenId) -> bool {
-            // This is a simplified check - in a real implementation,
-            // you might want to maintain a separate mapping for efficiency
-            for i in 1..=self.bridge_request_counter {
-                if let Some(request) = self.bridge_requests.get(i) {
-                    if request.token_id == token_id
-                        && matches!(
-                            request.status,
-                            BridgeOperationStatus::Pending | BridgeOperationStatus::Locked
-                        )
-                    {
-                        return true;
-                    }
-                }
-            }
-            false
+            self.token_pending_requests.contains(token_id)
         }
 
         /// Helper to generate bridge transaction hash
