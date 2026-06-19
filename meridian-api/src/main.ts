@@ -4,15 +4,44 @@ import { ValidationPipe } from '@nestjs/common';
 import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
 import helmet from 'helmet';
 import { DataResponseInterceptor } from './commom/interceptor/data-response/data-response.interceptor';
+import { ConfigService } from '@nestjs/config';
 
 async function bootstrap() {
   const app = await NestFactory.create(AppModule);
+  const configService = app.get(ConfigService);
 
   // Apply baseline security headers (Closes #448).
   // CSP is disabled to avoid breaking the @nestjs/swagger UI at /api,
   // which requires inline scripts/styles. Other helmet defaults (HSTS,
   // X-Frame-Options, X-Content-Type-Options, Referrer-Policy, etc.) remain on.
   app.use(helmet({ contentSecurityPolicy: false }));
+
+  // CORS Configuration
+  const nodeEnv = configService.get<string>('NODE_ENV') || 'development';
+  const allowedOriginsString = configService.get<string>('ALLOWED_ORIGINS');
+  const allowedOrigins = allowedOriginsString
+    ? allowedOriginsString.split(',').map(origin => origin.trim())
+    : [];
+  
+  // In development, we can allow all origins if no ALLOWED_ORIGINS is set
+  // In production, we strictly enforce allowed origins
+  let corsOrigin: boolean | string | string[] | ((origin: string, callback: (err: Error | null, allow?: boolean) => void) => void);
+  if (nodeEnv === 'development' && allowedOrigins.length === 0) {
+    corsOrigin = true;
+  } else {
+    corsOrigin = (origin: string, callback: (err: Error | null, allow?: boolean) => void) => {
+      if (!origin || allowedOrigins.includes(origin)) {
+        callback(null, true);
+      } else {
+        callback(new Error('Not allowed by CORS'));
+      }
+    };
+  }
+
+  app.enableCors({
+    origin: corsOrigin,
+    credentials: true,
+  });
 
   // Set global validation pipes
   app.useGlobalPipes(
