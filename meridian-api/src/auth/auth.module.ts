@@ -12,13 +12,19 @@ import { GenerateTokenProvider } from './providers/token.provider';
 import { RefreshTokenProvider } from './providers/refreshToken.provider';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { RefreshToken } from './entities/refresh-token.entity';
+import { VerifyEmailProvider } from './providers/verify-email.provider';
+import {
+  BcryptVerificationTokenProvider,
+  VerificationTokenProvider,
+} from './providers/verification-token.provider';
+import { User } from 'src/users/user.entity';
 
 @Module({
   imports: [
     forwardRef(() => UsersModule),
     ConfigModule.forFeature(jwtConfig),
     JwtModule.registerAsync(jwtConfig.asProvider()),
-    TypeOrmModule.forFeature([RefreshToken]),
+    TypeOrmModule.forFeature([RefreshToken, User]),
   ],
   providers: [
     AuthService,
@@ -26,6 +32,11 @@ import { RefreshToken } from './entities/refresh-token.entity';
     RefreshTokenProvider,
     { provide: HashingProvider, useClass: BcryptProvider },
     SignInProviders,
+    VerifyEmailProvider,
+    {
+      provide: VerificationTokenProvider,
+      useClass: BcryptVerificationTokenProvider,
+    },
   ],
   controllers: [AuthController],
   exports: [AuthService, HashingProvider],

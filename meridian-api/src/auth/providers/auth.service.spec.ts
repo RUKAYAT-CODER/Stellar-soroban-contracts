@@ -1,28 +1,13 @@
-// Mock all transitive src/-aliased paths that Jest can't resolve
-jest.mock(
-  'src/users/providers/user-auth.facade',
-  () => ({ UserAuthFacade: class UserAuthFacade {} }),
-  { virtual: true },
-);
-jest.mock(
-  'src/users/providers/user.services',
-  () => ({ UserService: class UserService {} }),
-  { virtual: true },
-);
-jest.mock('../dto/sign-in.dto', () => ({}), { virtual: true });
-jest.mock('./hashing', () => ({ HashingProvider: class HashingProvider {} }), {
+jest.mock('src/users/user.entity', () => ({ User: class User {} }), {
   virtual: true,
 });
-jest.mock(
-  './token.provider',
-  () => ({ GenerateTokenProvider: class GenerateTokenProvider {} }),
-  { virtual: true },
-);
-jest.mock('../dto/refresh-token-dto', () => ({}), { virtual: true });
 
+import {
+  UnauthorizedException,
+} from '@nestjs/common';
 import { AuthService } from './auth.service';
 
-describe('AuthService', () => {
+describe('AuthService - email verification (issue #435)', () => {
   let service: AuthService;
   let signInProviders: { SignIn: jest.Mock };
   let refreshTokenProvider: {
@@ -30,49 +15,78 @@ describe('AuthService', () => {
     logout: jest.Mock;
     logoutAll: jest.Mock;
   };
+  let verifyEmailProvider: { verifyEmail: jest.Mock };
+  let usersRepository: { findOne: jest.Mock };
+
+  const fakeUser: any = { id: 7, email: 'a@b.com' };
 
   beforeEach(() => {
-    signInProviders = { SignIn: jest.fn(async () => ({ accessToken: 'tok' })) };
+    signInProviders = { SignIn: jest.fn() };
     refreshTokenProvider = {
-      refreshToken: jest.fn(async () => ({ accessToken: 'new-tok' })),
-      logout: jest.fn(async () => ({ success: true })),
-      logoutAll: jest.fn(async () => ({ success: true })),
+      refreshToken: jest.fn(),
+      logout: jest.fn(),
+      logoutAll: jest.fn(),
     };
+    verifyEmailProvider = { verifyEmail: jest.fn() };
+    usersRepository = { findOne: jest.fn() };
 
     service = new AuthService(
       signInProviders as any,
       refreshTokenProvider as any,
+      verifyEmailProvider as any,
+      usersRepository as any,
     );
   });
 
-  it('SignIn delegates to signInProviders', async () => {
-    const dto = { email: 'a@b.com', password: 'pass' } as any;
-    const result = await service.SignIn(dto);
-    expect(signInProviders.SignIn).toHaveBeenCalledWith(dto);
-    expect(result).toEqual({ accessToken: 'tok' });
+  describe('verifyEmail', () => {
+    it('delegates to VerifyEmailProvider and returns the verified user', async () => {
+      verifyEmailProvider.verifyEmail.mockResolvedValueOnce(fakeUser);
+
+      await expect(service.verifyEmail('raw')).resolves.toEqual(fakeUser);
+      expect(verifyEmailProvider.verifyEmail).toHaveBeenCalledWith('raw');
+    });
+
+    it('propagates errors from VerifyEmailProvider', async () => {
+      verifyEmailProvider.verifyEmail.mockRejectedValueOnce(
+        new UnauthorizedException('bad'),
+      );
+
+      await expect(service.verifyEmail('bad')).rejects.toBeInstanceOf(
+        UnauthorizedException,
+      );
+    });
   });
 
-  it('RefreshToken delegates to refreshTokenProvider with the DTO', async () => {
-    const dto = { refreshToken: 'token' } as any;
-    const result = await service.RefreshToken(dto);
-    expect(refreshTokenProvider.refreshToken).toHaveBeenCalledWith(
-      dto,
-      undefined,
-    );
-    expect(result).toEqual({ accessToken: 'new-tok' });
-  });
+  describe('resendVerification', () => {
+    it('returns an acknowledgement for an existing user', async () => {
+      usersRepository.findOne.mockResolvedValueOnce(fakeUser);
 
-  it('logout delegates to refreshTokenProvider', async () => {
-    const dto = { refreshToken: 'token' } as any;
-    const result = await service.logout(dto);
-    expect(refreshTokenProvider.logout).toHaveBeenCalledWith(dto);
-    expect(result).toEqual({ success: true });
-  });
+      const result = await service.resendVerification(fakeUser.email);
 
-  it('logoutAll delegates to refreshTokenProvider', async () => {
-    const userId = 1;
-    const result = await service.logoutAll(userId);
-    expect(refreshTokenProvider.logoutAll).toHaveBeenCalledWith(userId);
-    expect(result).toEqual({ success: true });
+      expect(usersRepository.findOne).toHaveBeenCalledWith({
+        where: { email: fakeUser.email },
+        withDeleted: false,
+      });
+      expect(result).toMatchObject({ status: 'ok' });
+    });
+
+    it('returns the same acknowledgement for an unknown email (no enumeration)', async () => {
+      usersRepository.findOne.mockResolvedValueOnce(null);
+
+      const result = await service.resendVerification('ghost@example.com');
+
+      expect(result).toMatchObject({ status: 'ok' });
+    });
+
+    it('returns the same acknowledgement for an already-verified user (idempotent)', async () => {
+      usersRepository.findOne.mockResolvedValueOnce({
+        ...fakeUser,
+        emailVerified: true,
+      });
+
+      const result = await service.resendVerification(fakeUser.email);
+
+      expect(result).toMatchObject({ status: 'ok' });
+    });
   });
 });

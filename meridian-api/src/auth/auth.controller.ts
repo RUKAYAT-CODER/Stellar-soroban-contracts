@@ -11,6 +11,8 @@ import { AuthService } from './providers/auth.service';
 import { SignInDto } from './dto/sign-in.dto';
 import { RefreshTokenDto } from './dto/refresh-token-dto';
 import { LogoutDto } from './dto/logout.dto';
+import { VerifyEmailDto } from './dto/verify-email.dto';
+import { ResendVerificationDto } from './dto/resend-verification.dto';
 import { Throttle } from '@nestjs/throttler';
 import { ApiTags, ApiOperation, ApiResponse } from '@nestjs/swagger';
 import { AccessTokenGuard } from './guard/access-token/access-token.guard';
@@ -92,5 +94,36 @@ export class AuthController {
     }
 
     return this.authService.logoutAll(userId);
+  }
+
+  @Post('/verify-email')
+  @Throttle({ default: { limit: 10, ttl: 60000 } })
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({
+    summary: 'Verify email with one-time token from signup mail',
+  })
+  @ApiResponse({ status: 200, description: 'Email verified' })
+  @ApiResponse({
+    status: 401,
+    description: 'Invalid or expired verification token',
+  })
+  public async verifyEmail(@Body() verifyEmailDto: VerifyEmailDto) {
+    const user = await this.authService.verifyEmail(verifyEmailDto.token);
+    return { verified: true, email: user.email };
+  }
+
+  @Post('/resend-verification')
+  @Throttle({ default: { limit: 3, ttl: 60000 } })
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({ summary: 'Resend the email verification mail' })
+  @ApiResponse({
+    status: 200,
+    description:
+      'Acknowledgement — never reveals whether the email is registered',
+  })
+  public async resendVerification(
+    @Body() resendVerificationDto: ResendVerificationDto,
+  ) {
+    return this.authService.resendVerification(resendVerificationDto.email);
   }
 }

@@ -41,6 +41,21 @@ export class User {
   @DeleteDateColumn()
   deletedAt?: Date;
 
+  // Email verification (issue #435): the gate for POST /auth/sign-in. While
+  // `false`, the user is presumed not yet activated; the 403 gate in
+  // SignInProviders asks them to verify their email first rather than
+  // leaking whether their password was right.
+  @Column({ default: false })
+  emailVerified: boolean;
+
+  @Exclude()
+  @Column('varchar', { nullable: true })
+  emailVerificationToken: string | null;
+
+  @Exclude()
+  @Column('datetime', { nullable: true })
+  emailVerificationExpires: Date | null;
+
   // @Column({ default: true })
   // isActive: boolean;
 

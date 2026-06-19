@@ -1,4 +1,5 @@
 import {
+  ForbiddenException,
   Injectable,
   RequestTimeoutException,
   UnauthorizedException,
@@ -43,6 +44,16 @@ export class SignInProviders {
     //send a confirmation
     if (!isEqual) {
       throw new UnauthorizedException('password/email is wrong');
+    }
+
+    // Email-verification gate (issue #435): we deliberately reject AFTER the
+    // password match so a successful sign-in only happens for verified users.
+    // The 403 wording is intentionally generic so the response cannot be
+    // used to enumerate which emails have been registered.
+    if (!user.emailVerified) {
+      throw new ForbiddenException(
+        'Please verify your email before signing in.',
+      );
     }
 
     const token = await this.generateTokenProvider.generateTokens(user);
