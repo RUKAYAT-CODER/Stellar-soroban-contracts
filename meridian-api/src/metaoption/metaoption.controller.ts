@@ -1,6 +1,6 @@
 import { Body, Controller, Post } from '@nestjs/common';
 import { MetaoptionService } from './metaoption.service';
-import { CreatePostMetaOptionsDto } from 'src/DTO/createPostMetadto';
+import { CreatePostMetaOptionsDto } from './dto/create-post-meta-options.dto';
 
 @Controller('meta-options')
 export class MetaoptionController {

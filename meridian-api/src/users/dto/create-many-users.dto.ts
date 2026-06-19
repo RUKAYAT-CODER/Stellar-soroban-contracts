@@ -7,7 +7,7 @@ import {
   IsString,
   ValidateNested,
 } from 'class-validator';
-import { CreateUserDto } from 'src/DTO/create-user.dto';
+import { CreateUserDto } from './create-user.dto';
 
 export class CreateManyUsersDto {
   @ApiProperty({
@@ -21,5 +21,3 @@ export class CreateManyUsersDto {
   @Type(() => CreateUserDto)
   users: CreateUserDto[];
 }
-
-// validatrenested means for all validation in creteuserdto should also work for manyuserdto

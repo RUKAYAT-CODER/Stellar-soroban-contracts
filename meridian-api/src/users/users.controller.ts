@@ -16,10 +16,10 @@ import {
   UseInterceptors,
   ClassSerializerInterceptor,
 } from '@nestjs/common';
-import { CreateUserDto } from 'src/DTO/create-user.dto';
-import { GetuserParamDto } from 'src/DTO/userparamdto';
+import { CreateUserDto } from './dto/create-user.dto';
+import { GetuserParamDto } from './dto/user-param.dto';
 import { UserService } from './providers/user.services';
-import { EditUserDto } from 'src/DTO/patch-user.dto';
+import { EditUserDto } from './dto/patch-user.dto';
 import {
   ApiResponse,
   ApiTags,
@@ -30,7 +30,7 @@ import {
 import { AccessTokenGuard } from 'src/auth/guard/access-token/access-token.guard';
 import { Auth } from 'src/auth/decorators/auth/auth.decorator';
 import { AuthType } from 'src/auth/enums/auth-type.enum';
-import { CreateManyUsersDto } from './dtos/createManyUserdto';
+import { CreateManyUsersDto } from './dto/create-many-users.dto';
 
 @Controller('users')
 // line 14 is a method

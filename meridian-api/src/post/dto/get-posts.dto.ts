@@ -1,7 +1,7 @@
 import { IntersectionType, ApiPropertyOptional } from '@nestjs/swagger';
 import { IsISO8601, IsOptional } from 'class-validator';
 import { Type } from 'class-transformer';
-import { PaginationQueryDto } from 'src/commom/pagination/pagination-query.dto';
+import { PaginationQueryDto } from 'src/common/pagination/dto/pagination-query.dto';
 
 class GetPostsBaseDto {
   @ApiPropertyOptional({
@@ -27,6 +27,3 @@ export class GetPostsDto extends IntersectionType(
   GetPostsBaseDto,
   PaginationQueryDto,
 ) {}
-
-// actual dto we want to sent on line 21 and 22
-// intersection used to add both of their contents together

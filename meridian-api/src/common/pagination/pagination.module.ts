@@ -1,5 +1,5 @@
-import { Module, forwardRef } from '@nestjs/common';
-import { Pagination } from './pagination/Provider/pagination';
+import { Module } from '@nestjs/common';
+import { Pagination } from './providers/pagination.provider';
 
 @Module({
   imports: [],

@@ -12,11 +12,11 @@ import {
   ValidationPipe,
 } from '@nestjs/common';
 import { PostsService } from './provider/post.service';
-import { GetPostsParamDto } from 'src/DTO/postparamdto';
-import { CreatePostDto } from 'src/DTO/create-post.dto';
+import { GetPostsParamDto } from './dto/post-param.dto';
+import { CreatePostDto } from './dto/create-post.dto';
 import { ApiTags, ApiOperation, ApiResponse } from '@nestjs/swagger';
-import { PatchPostDto } from 'src/DTO/patch-post.dto';
-import { GetPostsDto } from 'src/DTO/getPostdto';
+import { PatchPostDto } from './dto/patch-post.dto';
+import { GetPostsDto } from './dto/get-posts.dto';
 
 @ApiTags('Posts')
 @Controller('posts')

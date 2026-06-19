@@ -1,6 +1,6 @@
 import { Exclude } from 'class-transformer';
 import { Post } from 'src/post/post.entity';
-import { Tweet } from 'src/tweets/dto/tweet.entity';
+import { Tweet } from 'src/tweets/entities/tweet.entity';
 import {
   Entity,
   Column,

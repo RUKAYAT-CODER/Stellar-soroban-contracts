@@ -1,5 +1,5 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
-import { Tweet } from './dto/tweet.entity';
+import { Tweet } from './entities/tweet.entity';
 import { Repository } from 'typeorm';
 import { UserService } from 'src/users/providers/user.services';
 import { CreateTweetDto } from './dto/create-tweet.dto';

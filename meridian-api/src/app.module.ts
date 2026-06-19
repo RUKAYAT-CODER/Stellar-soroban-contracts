@@ -15,13 +15,13 @@ import { TagModule } from './tag/tag.module';
 import { MetaoptionModule } from './metaoption/metaoption.module';
 import { AuthModule } from './auth/auth.module';
 import { MailModule } from './mail/mail.module';
-import { PaginationModule } from './commom/pagination.module';
+import { PaginationModule } from './common/pagination/pagination.module';
 
 import jwtConfig from './auth/config/jwt.config';
-import { DataResponseInterceptor } from './commom/interceptor/data-response/data-response.interceptor';
+import { DataResponseInterceptor } from './common/interceptors/data-response.interceptor';
 import { AccessTokenGuard } from './auth/guard/access-token/access-token.guard';
 import { MailProvider } from './mail/providers/mail.provider';
-import { TweetModule } from './tweets/dto/tweet.module';
+import { TweetModule } from './tweets/tweet.module';
 import { UploadModule } from './upload/upload.module';
 import { HealthModule } from './health/health.module';
 import { PrometheusModule } from '@willsoto/nestjs-prometheus';

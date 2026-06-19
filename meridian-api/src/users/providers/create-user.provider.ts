@@ -5,7 +5,7 @@ import {
   Injectable,
   RequestTimeoutException,
 } from '@nestjs/common';
-import { CreateUserDto } from 'src/DTO/create-user.dto';
+import { CreateUserDto } from '../dto/create-user.dto';
 import { Repository } from 'typeorm';
 import { User } from '../user.entity';
 import { InjectRepository } from '@nestjs/typeorm';

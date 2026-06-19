@@ -3,7 +3,7 @@ import {
   RequestTimeoutException,
   UnauthorizedException,
 } from '@nestjs/common';
-import { SignInDto } from 'src/DTO/signin-dto';
+import { SignInDto } from '../dto/sign-in.dto';
 import { UserAuthFacade } from 'src/users/providers/user-auth.facade';
 import { HashingProvider } from './hashing';
 import { JwtService } from '@nestjs/jwt';

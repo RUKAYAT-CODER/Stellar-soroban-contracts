@@ -1,15 +1,15 @@
 import { Body, Injectable } from '@nestjs/common';
-import { GetPostsParamDto } from 'src/DTO/postparamdto';
+import { GetPostsParamDto } from '../dto/post-param.dto';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Post } from '../post.entity';
 import { Repository } from 'typeorm';
-import { CreatePostDto } from 'src/DTO/create-post.dto';
+import { CreatePostDto } from '../dto/create-post.dto';
 import { UserService } from 'src/users/providers/user.services';
 import { TagsService } from 'src/tag/tags.service';
-import { PatchPostDto } from 'src/DTO/patch-post.dto';
-import { GetPostsDto } from 'src/DTO/getPostdto';
-import { Pagination } from 'src/commom/pagination/Provider/pagination';
-import { Paginated } from 'src/commom/pagination/Interfaces/paginatedInterface';
+import { PatchPostDto } from '../dto/patch-post.dto';
+import { GetPostsDto } from '../dto/get-posts.dto';
+import { Pagination } from 'src/common/pagination/providers/pagination.provider';
+import { Paginated } from 'src/common/pagination/interfaces/paginated.interface';
 
 @Injectable()
 export class PostsService {

@@ -8,8 +8,8 @@ import { CreateUserProvider } from './providers/create-user.provider';
 import { FindOneByEmail } from './providers/find-one-by-email';
 import { CreateManyUser } from './providers/createManyUser.Provider';
 import { CreateUserBookProvider } from './providers/createUserWithBook';
-import { Tweet } from 'src/tweets/dto/tweet.entity';
-import { TweetModule } from 'src/tweets/dto/tweet.module';
+import { Tweet } from 'src/tweets/entities/tweet.entity';
+import { TweetModule } from 'src/tweets/tweet.module';
 import { UserAuthFacade } from './providers/user-auth.facade';
 
 @Module({

@@ -10,7 +10,4 @@ export class PatchPostDto extends PartialType(CreatePostDto) {
   @IsInt()
   @IsNotEmpty()
   id: number;
-
-  // we can edit everything in createpostDto except the Id
-  // anything u put in the dto cannot be edited
 }

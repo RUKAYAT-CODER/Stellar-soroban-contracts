@@ -1,16 +1,14 @@
 import { Injectable, HttpException, HttpStatus } from '@nestjs/common';
-// import { GetuserParamDto } from "src/DTO/userparamdto";
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { User } from '../user.entity';
-import { CreateUserDto } from 'src/DTO/create-user.dto';
-import { GetPostsParamDto } from 'src/DTO/postparamdto';
-import { EditUserDto } from 'src/DTO/patch-user.dto';
+import { CreateUserDto } from '../dto/create-user.dto';
+import { GetPostsParamDto } from 'src/post/dto/post-param.dto';
+import { EditUserDto } from '../dto/patch-user.dto';
 import { CreateUserProvider } from './create-user.provider';
 import { FindOneByEmail } from './find-one-by-email';
-// import { Pagination } from "src/commom/pagination/Provider/pagination";
 import { CreateManyUser } from './createManyUser.Provider';
-import { CreateManyUsersDto } from '../dtos/createManyUserdto';
+import { CreateManyUsersDto } from '../dto/create-many-users.dto';
 import { CreateUserBookProvider } from './createUserWithBook';
 
 @Injectable()

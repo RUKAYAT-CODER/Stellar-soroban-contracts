@@ -9,7 +9,7 @@ jest.mock(
   () => ({ UserService: class UserService {} }),
   { virtual: true },
 );
-jest.mock('src/DTO/signin-dto', () => ({}), { virtual: true });
+jest.mock('../dto/sign-in.dto', () => ({}), { virtual: true });
 jest.mock('./hashing', () => ({ HashingProvider: class HashingProvider {} }), {
   virtual: true,
 });

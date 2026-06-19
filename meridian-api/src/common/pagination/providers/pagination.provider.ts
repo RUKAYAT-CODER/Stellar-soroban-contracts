@@ -1,9 +1,9 @@
 import { Inject, Injectable } from '@nestjs/common';
-import { PaginationQueryDto } from '../pagination-query.dto';
+import { PaginationQueryDto } from '../dto/pagination-query.dto';
 import { ObjectLiteral, Repository } from 'typeorm';
 import { Request } from 'express';
 import { REQUEST } from '@nestjs/core';
-import { Paginated } from '../Interfaces/paginatedInterface';
+import { Paginated } from '../interfaces/paginated.interface';
 
 @Injectable()
 export class Pagination {
@@ -17,22 +17,16 @@ export class Pagination {
     repository: Repository<T>,
   ): Promise<Paginated<T>> {
     const result = await repository.find({
-      //skip: number of post
-      //take: number of post to show per page
       skip: paginationQueryDto.limit * (paginationQueryDto.page - 1),
       take: paginationQueryDto.limit,
     });
 
-    // create a requestUrl
-    // i.e http://localhost:3000/resource
-    // the http is this.requestprotocol
     const baseUrl = this.request.protocol;
     +'://' + this.request.headers.host + '/';
 
     const newUrl = new URL(this.request.url, baseUrl);
 
     console.log(baseUrl);
-    // line 34 give u http://localhost:3000/resource  as result on your terminal
     console.log(newUrl);
 
     const totalItems = await repository.count();

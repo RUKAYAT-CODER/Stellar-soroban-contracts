@@ -12,11 +12,11 @@ import {
   MinLength,
   ValidateNested,
 } from 'class-validator';
-import { PostStatus } from 'src/post/Enums/post-status.enum';
-import { postType } from 'src/post/Enums/post-type.enum';
+import { PostStatus } from '../Enums/post-status.enum';
+import { postType } from '../Enums/post-type.enum';
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import { Type } from 'class-transformer';
-import { CreatePostMetaOptionsDto } from './createPostMetadto';
+import { CreatePostMetaOptionsDto } from 'src/metaoption/dto/create-post-meta-options.dto';
 
 export class CreatePostDto {
   @ApiProperty({

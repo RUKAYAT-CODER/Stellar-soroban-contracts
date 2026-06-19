@@ -3,7 +3,7 @@ jest.mock('../user.entity', () => ({ User: class User {} }), { virtual: true });
 jest.mock('src/post/post.entity', () => ({ Post: class Post {} }), {
   virtual: true,
 });
-jest.mock('src/tweets/dto/tweet.entity', () => ({ Tweet: class Tweet {} }), {
+jest.mock('src/tweets/entities/tweet.entity', () => ({ Tweet: class Tweet {} }), {
   virtual: true,
 });
 jest.mock(
@@ -17,13 +17,13 @@ jest.mock(
   { virtual: true },
 );
 jest.mock(
-  'src/commom/userAlreadyExistException',
+  'src/common/exceptions/user-already-exists.exception',
   () => ({ UserAlreadyExistException: class UserAlreadyExistException {} }),
   { virtual: true },
 );
-jest.mock('src/DTO/create-user.dto', () => ({}), { virtual: true });
-jest.mock('src/DTO/postparamdto', () => ({}), { virtual: true });
-jest.mock('src/DTO/patch-user.dto', () => ({}), { virtual: true });
+jest.mock('src/users/dto/create-user.dto', () => ({}), { virtual: true });
+jest.mock('src/post/dto/post-param.dto', () => ({}), { virtual: true });
+jest.mock('src/users/dto/patch-user.dto', () => ({}), { virtual: true });
 
 import { HttpException } from '@nestjs/common';
 import { UserService } from './user.services';

@@ -3,7 +3,7 @@ jest.mock('../user.entity', () => ({ User: class User {} }), { virtual: true });
 jest.mock('src/post/post.entity', () => ({ Post: class Post {} }), {
   virtual: true,
 });
-jest.mock('src/tweets/dto/tweet.entity', () => ({ Tweet: class Tweet {} }), {
+jest.mock('src/tweets/entities/tweet.entity', () => ({ Tweet: class Tweet {} }), {
   virtual: true,
 });
 

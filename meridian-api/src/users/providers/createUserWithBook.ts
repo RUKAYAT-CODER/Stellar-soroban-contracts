@@ -7,8 +7,8 @@ import { Repository } from 'typeorm';
 import { User } from '../user.entity';
 import { InjectRepository } from '@nestjs/typeorm';
 import { CreateManyUser } from './createManyUser.Provider';
-import { CreateUserDto } from 'src/DTO/create-user.dto';
-import { UserAlreadyExistException } from 'src/commom/userAlreadyExistException';
+import { CreateUserDto } from '../dto/create-user.dto';
+import { UserAlreadyExistException } from 'src/common/exceptions/user-already-exists.exception';
 
 @Injectable()
 export class CreateUserBookProvider {

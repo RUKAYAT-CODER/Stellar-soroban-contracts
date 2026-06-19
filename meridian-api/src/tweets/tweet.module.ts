@@ -1,8 +1,8 @@
 import { Module } from '@nestjs/common';
-import { TweetController } from '../tweet.controller';
-import { TweetService } from '../tweet.service';
+import { TweetController } from './tweet.controller';
+import { TweetService } from './tweet.service';
 import { TypeOrmModule } from '@nestjs/typeorm';
-import { Tweet } from './tweet.entity';
+import { Tweet } from './entities/tweet.entity';
 import { UsersModule } from 'src/users/users.module';
 
 @Module({

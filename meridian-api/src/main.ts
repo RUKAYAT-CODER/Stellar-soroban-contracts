@@ -3,7 +3,7 @@ import { AppModule } from './app.module';
 import { ValidationPipe } from '@nestjs/common';
 import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
 import helmet from 'helmet';
-import { DataResponseInterceptor } from './commom/interceptor/data-response/data-response.interceptor';
+import { DataResponseInterceptor } from './common/interceptors/data-response.interceptor';
 import { ConfigService } from '@nestjs/config';
 
 async function bootstrap() {

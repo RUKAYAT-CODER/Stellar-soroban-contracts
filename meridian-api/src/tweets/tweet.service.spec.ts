@@ -1,4 +1,4 @@
-jest.mock('./dto/tweet.entity', () => ({
+jest.mock('./entities/tweet.entity', () => ({
   Tweet: class Tweet {},
 }));
 

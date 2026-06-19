@@ -1,6 +1,6 @@
 import { Body, Controller, Post } from '@nestjs/common';
 import { TagsService } from './tags.service';
-import { CreateTagDto } from 'src/DTO/createTagDto';
+import { CreateTagDto } from './dto/create-tag.dto';
 
 @Controller('tag')
 export class TagController {

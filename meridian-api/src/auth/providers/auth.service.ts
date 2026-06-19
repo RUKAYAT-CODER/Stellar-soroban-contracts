@@ -1,5 +1,5 @@
 import { Injectable } from '@nestjs/common';
-import { SignInDto } from 'src/DTO/signin-dto';
+import { SignInDto } from '../dto/sign-in.dto';
 import { SignInProviders } from './sign-in.providers';
 import { RefreshTokenDto } from '../dto/refresh-token-dto';
 import { RefreshTokenProvider } from './refreshToken.provider';

@@ -8,7 +8,7 @@ import {
   UseGuards,
 } from '@nestjs/common';
 import { AuthService } from './providers/auth.service';
-import { SignInDto } from 'src/DTO/signin-dto';
+import { SignInDto } from './dto/sign-in.dto';
 import { RefreshTokenDto } from './dto/refresh-token-dto';
 import { LogoutDto } from './dto/logout.dto';
 import { Throttle } from '@nestjs/throttler';

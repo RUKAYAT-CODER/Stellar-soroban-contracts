@@ -7,7 +7,7 @@ import { Post } from './post.entity';
 // import { UserService } from 'src/users/providers/user.services';
 import { UsersModule } from 'src/users/users.module';
 import { TagModule } from 'src/tag/tag.module';
-import { PaginationModule } from 'src/commom/pagination.module';
+import { PaginationModule } from 'src/common/pagination/pagination.module';
 // import { TagsService } from 'src/tag/tags.service';
 
 @Module({
