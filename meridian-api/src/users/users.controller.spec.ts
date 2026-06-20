@@ -1,5 +1,5 @@
 import { Test, TestingModule } from '@nestjs/testing';
-import { INestApplication } from '@nestjs/common';
+import { INestApplication, ValidationPipe } from '@nestjs/common';
 import * as request from 'supertest';
 
 // Mocks for aliased paths that Jest cannot resolve.
@@ -26,6 +26,8 @@ jest.mock(
 
 import { UsersController } from './users.controller';
 import { UserService } from './providers/user.services';
+import { PASSWORD_STRENGTH_MESSAGE } from './dto/create-user.dto';
+import { validationExceptionFactory } from '../common/exceptions/validation.exception';
 
 describe('UsersController (integration)', () => {
   let app: INestApplication;
@@ -211,5 +213,222 @@ describe('UsersController (integration)', () => {
     await request(app.getHttpServer())
       .get('/users/find/not-a-number')
       .expect(400);
+  });
+});
+
+/**
+ * Issue #425 — exercises the end-to-end HTTP flow with Nest's global
+ * ValidationPipe (mirroring `main.ts`) to prove that a weak password
+ * produces a 400 Bad Request with the structured `{ field, message,
+ * constraint }` shape that the frontend will pin to specific form fields.
+ *
+ * The previous describe block deliberately omits the global pipe so that it
+ * can assert the controller's happy paths; this block adds a fresh testing
+ * module + app instance configured exactly like production.
+ */
+describe('UsersController POST /users password validation via ValidationPipe (issue #425)', () => {
+  let appWithPipe: INestApplication;
+  let userServiceMock: {
+    createUsers: jest.Mock;
+    editUser: jest.Mock;
+  };
+
+  interface ValidationErrorRow {
+    field: string;
+    message: string;
+    constraint: string;
+  }
+
+  const isValidationErrorRow = (value: unknown): value is ValidationErrorRow =>
+    typeof value === 'object' &&
+    value !== null &&
+    typeof (value as ValidationErrorRow).field === 'string' &&
+    typeof (value as ValidationErrorRow).message === 'string' &&
+    typeof (value as ValidationErrorRow).constraint === 'string';
+
+  const extractErrorRows = (body: {
+    errors?: unknown;
+  }): ValidationErrorRow[] =>
+    Array.isArray(body.errors)
+      ? body.errors.filter(isValidationErrorRow)
+      : [];
+
+  beforeEach(async () => {
+    userServiceMock = {
+      createUsers: jest.fn(async () => [
+        { id: 1, firstName: 'John', lastName: 'Doe', email: 'john.doe@example.com' },
+      ]),
+      editUser: jest.fn(async () => [
+        { id: 1, firstName: 'John', lastName: 'Doe', email: 'john.doe@example.com' },
+      ]),
+    };
+    const moduleRef: TestingModule = await Test.createTestingModule({
+      controllers: [UsersController],
+      providers: [{ provide: UserService, useValue: userServiceMock }],
+    }).compile();
+    appWithPipe = moduleRef.createNestApplication();
+    appWithPipe.useGlobalPipes(
+      new ValidationPipe({
+        whitelist: true,
+        forbidNonWhitelisted: true,
+        transform: true,
+        transformOptions: { enableImplicitConversion: true },
+        exceptionFactory: validationExceptionFactory,
+      }),
+    );
+    await appWithPipe.init();
+  });
+
+  afterEach(async () => {
+    await appWithPipe.close();
+  });
+
+  it('returns 400 with structured field-level errors when the password is weak', async () => {
+    const dto = {
+      firstName: 'John',
+      lastName: 'Doe',
+      email: 'john.doe@example.com',
+      password: 'password', // no uppercase, no digit, no special
+    };
+
+    const response = await request(appWithPipe.getHttpServer())
+      .post('/users')
+      .send(dto)
+      .expect(400);
+
+    // Top-level shape — matches main.ts response body
+    expect(response.body).toMatchObject({
+      statusCode: 400,
+      error: 'Bad Request',
+      message: 'Validation failed',
+    });
+
+    // Structured rows
+    const rows = extractErrorRows(response.body);
+    expect(rows.length).toBeGreaterThan(0);
+
+    // Every relevant password constraint must surface its own row, each
+    // carrying the constraint key and the human-readable message.
+    const passwordRows = rows.filter((r) => r.field === 'password');
+    expect(passwordRows.length).toBeGreaterThan(0);
+
+    const constraints = passwordRows.map((r) => r.constraint);
+    expect(constraints).toContain('matches');
+
+    const matchesRow = passwordRows.find((r) => r.constraint === 'matches');
+    expect(matchesRow?.message).toContain(PASSWORD_STRENGTH_MESSAGE);
+
+    // The controller must not have invoked the service — validation rejected
+    // the request before reaching the handler.
+    expect(userServiceMock.createUsers).not.toHaveBeenCalled();
+  });
+
+  it('returns 400 when the password is too short (< 8 chars)', async () => {
+    const dto = {
+      firstName: 'John',
+      lastName: 'Doe',
+      email: 'john.doe@example.com',
+      password: 'Ab1!',
+    };
+    const response = await request(appWithPipe.getHttpServer())
+      .post('/users')
+      .send(dto)
+      .expect(400);
+    expect(response.body.statusCode).toBe(400);
+    expect(response.body.message).toBe('Validation failed');
+    const rows = extractErrorRows(response.body);
+    expect(rows.length).toBeGreaterThan(0);
+    // The `matches` constraint's .{8,16} anchor surface for too-short input.
+    expect(rows.some((r) => r.field === 'password' && r.constraint === 'matches')).toBe(true);
+  });
+
+  it('returns 400 when the password is too long (> 16 chars)', async () => {
+    const dto = {
+      firstName: 'John',
+      lastName: 'Doe',
+      email: 'john.doe@example.com',
+      password: 'Abcdef1!Abcdef1Ab', // 17 chars
+    };
+    const response = await request(appWithPipe.getHttpServer())
+      .post('/users')
+      .send(dto)
+      .expect(400);
+    expect(response.body.statusCode).toBe(400);
+    expect(response.body.message).toBe('Validation failed');
+    const rows = extractErrorRows(response.body);
+    expect(rows.length).toBeGreaterThan(0);
+    expect(rows.some((r) => r.field === 'password' && r.constraint === 'matches')).toBe(true);
+  });
+
+  it('returns 400 with a row per failing field when multiple fields are invalid', async () => {
+    const dto = {
+      firstName: 'J', // too short for @MinLength(2)
+      lastName: 'Doe',
+      email: 'not-an-email', // fails @IsEmail
+      password: 'Password1!',
+    };
+    const response = await request(appWithPipe.getHttpServer())
+      .post('/users')
+      .send(dto)
+      .expect(400);
+    const rows = extractErrorRows(response.body);
+    const fields = new Set(rows.map((r) => r.field));
+    expect(fields.has('firstName')).toBe(true);
+    expect(fields.has('email')).toBe(true);
+    // Password succeeded; it must NOT appear in the error rows.
+    expect(fields.has('password')).toBe(false);
+  });
+
+  it('returns 201 when the password meets every requirement', async () => {
+    const dto = {
+      firstName: 'John',
+      lastName: 'Doe',
+      email: 'john.doe@example.com',
+      password: 'Password1!',
+    };
+    await request(appWithPipe.getHttpServer())
+      .post('/users')
+      .send(dto)
+      .expect(201);
+    expect(userServiceMock.createUsers).toHaveBeenCalledWith(
+      expect.objectContaining({ password: 'Password1!' }),
+    );
+  });
+
+  it('returns 400 on PATCH /users when the new password is weak (mirrors EditUserDto policy)', async () => {
+    const dto = { id: 1, password: 'password' };
+    const response = await request(appWithPipe.getHttpServer())
+      .patch('/users')
+      .send(dto)
+      .expect(400);
+    expect(response.body.message).toBe('Validation failed');
+    const rows = extractErrorRows(response.body);
+    const passwordRows = rows.filter((r) => r.field === 'password');
+    expect(passwordRows.length).toBeGreaterThan(0);
+    expect(
+      passwordRows.find((r) => r.constraint === 'matches')?.message,
+    ).toContain(PASSWORD_STRENGTH_MESSAGE);
+    expect(userServiceMock.editUser).not.toHaveBeenCalled();
+  });
+
+  it('accepts PATCH /users that omits the password', async () => {
+    await request(appWithPipe.getHttpServer())
+      .patch('/users')
+      .send({ id: 1, firstName: 'Updated' })
+      .expect(200);
+    expect(userServiceMock.editUser).toHaveBeenCalledWith(
+      expect.objectContaining({ id: 1, firstName: 'Updated' }),
+    );
+  });
+
+  it('accepts PATCH /users when the new password meets the policy', async () => {
+    const dto = { id: 1, password: 'Password1!' };
+    await request(appWithPipe.getHttpServer())
+      .patch('/users')
+      .send(dto)
+      .expect(200);
+    expect(userServiceMock.editUser).toHaveBeenCalledWith(
+      expect.objectContaining({ id: 1, password: 'Password1!' }),
+    );
   });
 });

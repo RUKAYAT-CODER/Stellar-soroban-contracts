@@ -5,6 +5,7 @@ import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
 import helmet from 'helmet';
 import { DataResponseInterceptor } from './common/interceptors/data-response.interceptor';
 import { ConfigService } from '@nestjs/config';
+import { validationExceptionFactory } from './common/exceptions/validation.exception';
 
 async function bootstrap() {
   const app = await NestFactory.create(AppModule);
@@ -43,7 +44,10 @@ async function bootstrap() {
     credentials: true,
   });
 
-  // Set global validation pipes
+  // Set global validation pipes. The custom `exceptionFactory` reshapes
+  // class-validator's flat `message: string[]` response into a structured
+  // `{ errors: [{ field, message, constraint }] }` shape that the frontend
+  // can pin directly to specific form fields.
   app.useGlobalPipes(
     new ValidationPipe({
       whitelist: true,
@@ -52,6 +56,7 @@ async function bootstrap() {
       transformOptions: {
         enableImplicitConversion: true,
       },
+      exceptionFactory: validationExceptionFactory,
     }),
   );
 
