@@ -384,4 +384,130 @@
             let errors = contract.get_recent_errors(10);
             assert_eq!(errors, Vec::new());
         }
-    
+
+        // Helper: registers a property, verifies compliance, adds bob as operator,
+        // and returns the token_id.
+        fn setup_bridge_ready_token(contract: &mut PropertyToken) -> u64 {
+            let accounts = test::default_accounts::<DefaultEnvironment>();
+            test::set_caller::<DefaultEnvironment>(accounts.alice);
+
+            let metadata = PropertyMetadata {
+                location: String::from("Bridge St"),
+                size: 1000,
+                legal_description: String::from("Bridge test property"),
+                valuation: 500000,
+                documents_url: String::from("ipfs://bridge"),
+            };
+            let token_id = contract
+                .register_property_with_token(metadata)
+                .expect("registration should succeed");
+
+            test::set_caller::<DefaultEnvironment>(contract.admin());
+            contract
+                .verify_compliance(token_id, true)
+                .expect("compliance verification should succeed");
+            contract
+                .add_bridge_operator(accounts.bob)
+                .expect("add operator should succeed");
+
+            token_id
+        }
+
+        #[ink::test]
+        fn test_duplicate_bridge_request_rejected() {
+            let accounts = test::default_accounts::<DefaultEnvironment>();
+            test::set_caller::<DefaultEnvironment>(accounts.alice);
+            let mut contract = setup_contract();
+            let token_id = setup_bridge_ready_token(&mut contract);
+
+            // First request must succeed
+            test::set_caller::<DefaultEnvironment>(accounts.alice);
+            let first = contract.initiate_bridge_multisig(
+                token_id,
+                2,
+                accounts.bob,
+                2,
+                None,
+            );
+            assert!(first.is_ok(), "first bridge request should succeed");
+
+            // Second request for the same token must be rejected
+            let second = contract.initiate_bridge_multisig(
+                token_id,
+                2,
+                accounts.bob,
+                2,
+                None,
+            );
+            assert_eq!(second, Err(Error::DuplicateBridgeRequest));
+        }
+
+        #[ink::test]
+        fn test_pending_cleared_on_rejection() {
+            let accounts = test::default_accounts::<DefaultEnvironment>();
+            test::set_caller::<DefaultEnvironment>(accounts.alice);
+            let mut contract = setup_contract();
+            let token_id = setup_bridge_ready_token(&mut contract);
+
+            test::set_caller::<DefaultEnvironment>(accounts.alice);
+            let request_id = contract
+                .initiate_bridge_multisig(token_id, 2, accounts.bob, 2, None)
+                .expect("initiate should succeed");
+
+            // Operator rejects
+            test::set_caller::<DefaultEnvironment>(accounts.bob);
+            contract
+                .sign_bridge_request(request_id, false)
+                .expect("rejection should succeed");
+
+            // A new request for the same token must now succeed (mapping entry cleared)
+            test::set_caller::<DefaultEnvironment>(accounts.alice);
+            let second = contract.initiate_bridge_multisig(
+                token_id,
+                2,
+                accounts.bob,
+                2,
+                None,
+            );
+            assert!(second.is_ok(), "new request after rejection should succeed");
+        }
+
+        #[ink::test]
+        fn test_retry_bridge_restores_pending_guard() {
+            let accounts = test::default_accounts::<DefaultEnvironment>();
+            test::set_caller::<DefaultEnvironment>(accounts.alice);
+            let mut contract = setup_contract();
+            let token_id = setup_bridge_ready_token(&mut contract);
+
+            test::set_caller::<DefaultEnvironment>(accounts.alice);
+            let request_id = contract
+                .initiate_bridge_multisig(token_id, 2, accounts.bob, 2, None)
+                .expect("initiate should succeed");
+
+            // Operator rejects -> mapping entry removed
+            test::set_caller::<DefaultEnvironment>(accounts.bob);
+            contract
+                .sign_bridge_request(request_id, false)
+                .expect("rejection should succeed");
+
+            // Admin retries -> mapping entry must be restored
+            test::set_caller::<DefaultEnvironment>(contract.admin());
+            contract
+                .recover_failed_bridge(request_id, RecoveryAction::RetryBridge)
+                .expect("retry recovery should succeed");
+
+            // Duplicate request must now be blocked again
+            test::set_caller::<DefaultEnvironment>(accounts.alice);
+            let dup = contract.initiate_bridge_multisig(
+                token_id,
+                2,
+                accounts.bob,
+                2,
+                None,
+            );
+            assert_eq!(
+                dup,
+                Err(Error::DuplicateBridgeRequest),
+                "duplicate should be blocked after retry recovery"
+            );
+        }

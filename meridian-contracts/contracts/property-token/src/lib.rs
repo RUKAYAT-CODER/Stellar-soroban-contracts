@@ -1647,6 +1647,9 @@ mod property_token {
                     // Reset request to pending for retry
                     request.status = BridgeOperationStatus::Pending;
                     request.signatures.clear();
+                    // Re-register in the O(1) pending lookup so duplicate-request
+                    // guard in initiate_bridge_multisig remains accurate.
+                    self.token_pending_requests.insert(request.token_id, &request_id);
                 }
                 RecoveryAction::CancelBridge => {
                     // Mark as cancelled and unlock token
