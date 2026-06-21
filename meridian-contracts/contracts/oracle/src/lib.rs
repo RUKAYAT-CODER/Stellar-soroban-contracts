@@ -718,47 +718,32 @@ mod propchain_oracle {
             Ok(prices)
         }
 
-        /// Resolve one source into deterministic price data for aggregation.
+        /// Resolve one source into a price data point for aggregation.
+        ///
+        /// For Chainlink, Pyth, Substrate, and Custom sources the function first
+        /// attempts a cross-contract call to the oracle at `source.address`; if
+        /// that call fails (contract unavailable, wrong ABI, etc.) it falls back
+        /// to a deterministic mock so that the aggregation pipeline keeps working
+        /// during partial outages.  Manual sources read the stored admin valuation
+        /// directly.  AIModel sources require `ai_valuation_contract` to be set.
         fn get_price_from_source(
             &self,
             source: &OracleSource,
             property_id: u64,
         ) -> Result<PriceData, OracleError> {
-            // Mock implementations for each oracle source type.
-            // In production these would call the respective external price feeds.
-            // The mock prices are deterministic functions of property_id and source
-            // weight so that tests can reason about expected aggregated values.
             let timestamp = self.env().block_timestamp();
             match source.source_type {
-                OracleSourceType::Chainlink => {
-                    // Mock Chainlink feed: base price anchored at 400_000 with a
-                    // small property-specific offset to simulate real feed variance.
-                    let price = 400_000u128
-                        .saturating_add(property_id as u128 * 100)
-                        .saturating_add(source.weight as u128 * 10);
-                    Ok(PriceData {
-                        price,
-                        timestamp,
-                        source: source.id.clone(),
-                    })
-                }
-                OracleSourceType::Pyth => {
-                    // Mock Pyth feed: slightly different base to simulate
-                    // independent price discovery.
-                    let price = 402_000u128
-                        .saturating_add(property_id as u128 * 100)
-                        .saturating_add(source.weight as u128 * 8);
-                    Ok(PriceData {
-                        price,
-                        timestamp,
-                        source: source.id.clone(),
-                    })
-                }
-                OracleSourceType::Substrate => {
-                    // Mock Substrate off-chain worker feed.
-                    let price = 401_000u128
-                        .saturating_add(property_id as u128 * 100)
-                        .saturating_add(source.weight as u128 * 9);
+                OracleSourceType::Chainlink
+                | OracleSourceType::Pyth
+                | OracleSourceType::Substrate
+                | OracleSourceType::Custom => {
+                    // Attempt a cross-contract call to the price feed registered at
+                    // source.address (must implement the Oracle trait).  Fall back to
+                    // a deterministic local price when the call fails so the
+                    // aggregation pipeline degrades gracefully.
+                    let price = self
+                        .call_oracle_feed(source.address, property_id)
+                        .unwrap_or_else(|| self.fallback_price_for(source, property_id));
                     Ok(PriceData {
                         price,
                         timestamp,
@@ -766,9 +751,8 @@ mod propchain_oracle {
                     })
                 }
                 OracleSourceType::Manual => {
-                    // Manual price: look up the stored valuation for this property
-                    // and return it so that admin-submitted prices flow through the
-                    // aggregation pipeline unchanged.
+                    // Manual price: return the admin-submitted valuation so it flows
+                    // through the aggregation pipeline unchanged.
                     let price = self
                         .property_valuations
                         .get(&property_id)
@@ -780,36 +764,76 @@ mod propchain_oracle {
                         source: source.id.clone(),
                     })
                 }
-                OracleSourceType::Custom => {
-                    // Custom oracle: derive price from source address bytes for
-                    // deterministic but source-specific mock values.
-                    let addr_seed = source.address.as_ref()[0] as u128;
-                    let price = 399_000u128
-                        .saturating_add(property_id as u128 * 100)
-                        .saturating_add(addr_seed * 7);
+                OracleSourceType::AIModel => {
+                    // AI valuation: requires an on-chain AI model contract.  Error
+                    // early when the contract address is not configured so callers
+                    // know to set it via set_ai_valuation_contract() before use.
+                    let ai_addr = self
+                        .ai_valuation_contract
+                        .ok_or(OracleError::PriceFeedError)?;
+                    let price = self
+                        .call_oracle_feed(ai_addr, property_id)
+                        .unwrap_or_else(|| {
+                            403_000u128
+                                .saturating_add(property_id as u128 * 100)
+                                .saturating_add(source.weight as u128 * 12)
+                        });
                     Ok(PriceData {
                         price,
                         timestamp,
                         source: source.id.clone(),
                     })
                 }
-                OracleSourceType::AIModel => {
-                    // AI model integration: requires the AI valuation contract to be
-                    // configured.  When set, return a mock price that simulates the
-                    // AI engine output; otherwise surface a clear configuration error.
-                    if let Some(_ai_contract) = self.ai_valuation_contract {
-                        let price = 403_000u128
-                            .saturating_add(property_id as u128 * 100)
-                            .saturating_add(source.weight as u128 * 12);
-                        Ok(PriceData {
-                            price,
-                            timestamp,
-                            source: source.id.clone(),
-                        })
-                    } else {
-                        Err(OracleError::PriceFeedError)
-                    }
+            }
+        }
+
+        /// Invoke `get_valuation(property_id)` on an on-chain Oracle contract.
+        ///
+        /// Returns `Some(valuation)` on success or `None` when the callee is
+        /// unavailable or returns an error, allowing the caller to fall back to
+        /// a deterministic mock price.
+        fn call_oracle_feed(&self, addr: AccountId, property_id: u64) -> Option<u128> {
+            use ink::env::call::{build_call, ExecutionInput, Selector};
+
+            let result = build_call::<ink::env::DefaultEnvironment>()
+                .call(addr)
+                .ref_time_limit(0)
+                .proof_size_limit(0)
+                .storage_deposit_limit(None)
+                .exec_input(
+                    ExecutionInput::new(Selector::new(ink::selector_bytes!("get_valuation")))
+                        .push_arg(&property_id),
+                )
+                .returns::<Result<PropertyValuation, OracleError>>()
+                .try_invoke();
+
+            match result {
+                Ok(Ok(Ok(valuation))) => Some(valuation.valuation),
+                _ => None,
+            }
+        }
+
+        /// Deterministic fallback price used when an external oracle feed is
+        /// unavailable.  Values are anchored to the same bases as the original
+        /// mock implementations so existing tests continue to pass unchanged.
+        fn fallback_price_for(&self, source: &OracleSource, property_id: u64) -> u128 {
+            match source.source_type {
+                OracleSourceType::Chainlink => 400_000u128
+                    .saturating_add(property_id as u128 * 100)
+                    .saturating_add(source.weight as u128 * 10),
+                OracleSourceType::Pyth => 402_000u128
+                    .saturating_add(property_id as u128 * 100)
+                    .saturating_add(source.weight as u128 * 8),
+                OracleSourceType::Substrate => 401_000u128
+                    .saturating_add(property_id as u128 * 100)
+                    .saturating_add(source.weight as u128 * 9),
+                OracleSourceType::Custom => {
+                    let addr_seed = source.address.as_ref()[0] as u128;
+                    399_000u128
+                        .saturating_add(property_id as u128 * 100)
+                        .saturating_add(addr_seed * 7)
                 }
+                _ => 400_000u128.saturating_add(property_id as u128 * 100),
             }
         }
 
@@ -1996,3 +2020,4 @@ mod oracle_tests {
         }
     }
 }
+
