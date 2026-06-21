@@ -762,7 +762,7 @@
                 .saturating_add(claims_history_score))
                 / 4;
 
-            let risk_level = Self::score_to_risk_level(overall);
+            let risk_level = Self::confidence_score_to_risk_level(overall);
 
             let now = self.env().block_timestamp();
             let assessment = RiskAssessment {
@@ -2723,8 +2723,25 @@
             Ok(())
         }
 
-        /// Convert a normalized score into the contract's risk-level enum.
-        fn score_to_risk_level(score: u32) -> RiskLevel {
+        /// Maps a property **confidence** (quality) score to the corresponding [`RiskLevel`].
+        ///
+        /// # Inverse Relationship (higher score = lower risk)
+        ///
+        /// The input score represents how *good* a property is — higher values reflect
+        /// better location, newer construction, and fewer past claims.  Consequently the
+        /// mapping is *inverse* with respect to risk:
+        ///
+        /// | Confidence Score | Risk Level  |
+        /// |------------------|-------------|
+        /// | 0–20             | `VeryHigh`  |
+        /// | 21–40            | `High`      |
+        /// | 41–60            | `Medium`    |
+        /// | 61–80            | `Low`       |
+        /// | 81–100           | `VeryLow`   |
+        ///
+        /// This is the canonical risk-level classification used by
+        /// [`Self::update_risk_assessment`] and [`Self::calculate_premium`].
+        fn confidence_score_to_risk_level(score: u32) -> RiskLevel {
             match score {
                 0..=20 => RiskLevel::VeryHigh,
                 21..=40 => RiskLevel::High,
@@ -2734,7 +2751,24 @@
             }
         }
 
-        /// Convert a risk score into the premium multiplier used by underwriting.
+        /// Converts a property confidence score into a premium risk multiplier.
+        ///
+        /// # Inverse Relationship (higher score = lower risk = lower premium)
+        ///
+        /// The input score represents property *quality* (higher is better), so the
+        /// multiplier is **inversely** related: good properties pay less, risky
+        /// properties pay more.
+        ///
+        /// | Confidence Score | Multiplier | Interpretation          |
+        /// |------------------|-----------|-------------------------|
+        /// | 0–20             | 400       | Very high risk premium  |
+        /// | 21–40            | 250       | High risk premium       |
+        /// | 41–60            | 150       | Medium risk premium     |
+        /// | 61–80            | 110       | Low risk premium        |
+        /// | 81–100           | 80        | Very low risk premium   |
+        ///
+        /// This multiplier is applied in [`Self::calculate_premium`] alongside the base rate
+        /// and coverage-type modifier.
         fn risk_score_to_multiplier(&self, score: u32) -> u32 {
             // score 0-100: higher score = lower risk = lower multiplier
             // Range: 400 (very high risk) to 80 (very low risk)

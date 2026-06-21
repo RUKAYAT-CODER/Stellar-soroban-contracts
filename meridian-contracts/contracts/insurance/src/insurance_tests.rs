@@ -147,6 +147,125 @@
     }
 
     // =========================================================================
+    // CONFIDENCE-SCORE → RISK-LEVEL MAPPING TESTS
+    // =========================================================================
+    // These tests verify that `confidence_score_to_risk_level` correctly maps
+    // property quality scores to risk levels (higher score = lower risk).
+
+    #[ink::test]
+    fn test_confidence_score_0_20_maps_to_very_high_risk() {
+        let mut contract = setup();
+        let accounts = test::default_accounts::<DefaultEnvironment>();
+        contract.authorize_oracle(accounts.bob).unwrap();
+        test::set_caller::<DefaultEnvironment>(accounts.bob);
+        // All sub-scores at 10 → overall = 10 (0–20 bucket)
+        contract.update_risk_assessment(1, 10, 10, 10, 10, 86_400).unwrap();
+        let assessment = contract.get_risk_assessment(1).unwrap();
+        assert_eq!(assessment.overall_risk_score, 10);
+        assert_eq!(assessment.risk_level, RiskLevel::VeryHigh);
+    }
+
+    #[ink::test]
+    fn test_confidence_score_21_40_maps_to_high_risk() {
+        let mut contract = setup();
+        let accounts = test::default_accounts::<DefaultEnvironment>();
+        contract.authorize_oracle(accounts.bob).unwrap();
+        test::set_caller::<DefaultEnvironment>(accounts.bob);
+        // All sub-scores at 30 → overall = 30 (21–40 bucket)
+        contract.update_risk_assessment(2, 30, 30, 30, 30, 86_400).unwrap();
+        let assessment = contract.get_risk_assessment(2).unwrap();
+        assert_eq!(assessment.overall_risk_score, 30);
+        assert_eq!(assessment.risk_level, RiskLevel::High);
+    }
+
+    #[ink::test]
+    fn test_confidence_score_41_60_maps_to_medium_risk() {
+        let mut contract = setup();
+        let accounts = test::default_accounts::<DefaultEnvironment>();
+        contract.authorize_oracle(accounts.bob).unwrap();
+        test::set_caller::<DefaultEnvironment>(accounts.bob);
+        // All sub-scores at 50 → overall = 50 (41–60 bucket)
+        contract.update_risk_assessment(3, 50, 50, 50, 50, 86_400).unwrap();
+        let assessment = contract.get_risk_assessment(3).unwrap();
+        assert_eq!(assessment.overall_risk_score, 50);
+        assert_eq!(assessment.risk_level, RiskLevel::Medium);
+    }
+
+    #[ink::test]
+    fn test_confidence_score_61_80_maps_to_low_risk() {
+        let mut contract = setup();
+        let accounts = test::default_accounts::<DefaultEnvironment>();
+        contract.authorize_oracle(accounts.bob).unwrap();
+        test::set_caller::<DefaultEnvironment>(accounts.bob);
+        // All sub-scores at 70 → overall = 70 (61–80 bucket)
+        contract.update_risk_assessment(4, 70, 70, 70, 70, 86_400).unwrap();
+        let assessment = contract.get_risk_assessment(4).unwrap();
+        assert_eq!(assessment.overall_risk_score, 70);
+        assert_eq!(assessment.risk_level, RiskLevel::Low);
+    }
+
+    #[ink::test]
+    fn test_confidence_score_81_100_maps_to_very_low_risk() {
+        let mut contract = setup();
+        let accounts = test::default_accounts::<DefaultEnvironment>();
+        contract.authorize_oracle(accounts.bob).unwrap();
+        test::set_caller::<DefaultEnvironment>(accounts.bob);
+        // All sub-scores at 90 → overall = 90 (81–100 bucket)
+        contract.update_risk_assessment(5, 90, 90, 90, 90, 86_400).unwrap();
+        let assessment = contract.get_risk_assessment(5).unwrap();
+        assert_eq!(assessment.overall_risk_score, 90);
+        assert_eq!(assessment.risk_level, RiskLevel::VeryLow);
+    }
+
+    #[ink::test]
+    fn test_confidence_score_boundary_values() {
+        let mut contract = setup();
+        let accounts = test::default_accounts::<DefaultEnvironment>();
+        contract.authorize_oracle(accounts.bob).unwrap();
+        test::set_caller::<DefaultEnvironment>(accounts.bob);
+
+        // Score 0 → VeryHigh (lower bound)
+        contract.update_risk_assessment(200, 0, 0, 0, 0, 86_400).unwrap();
+        assert_eq!(contract.get_risk_assessment(200).unwrap().risk_level, RiskLevel::VeryHigh);
+
+        // Score 20 → VeryHigh (upper bound)
+        contract.update_risk_assessment(201, 20, 20, 20, 20, 86_400).unwrap();
+        assert_eq!(contract.get_risk_assessment(201).unwrap().risk_level, RiskLevel::VeryHigh);
+
+        // Score 21 → High (lower bound)
+        contract.update_risk_assessment(202, 21, 21, 21, 21, 86_400).unwrap();
+        assert_eq!(contract.get_risk_assessment(202).unwrap().risk_level, RiskLevel::High);
+
+        // Score 40 → High (upper bound)
+        contract.update_risk_assessment(203, 40, 40, 40, 40, 86_400).unwrap();
+        assert_eq!(contract.get_risk_assessment(203).unwrap().risk_level, RiskLevel::High);
+
+        // Score 41 → Medium (lower bound)
+        contract.update_risk_assessment(204, 41, 41, 41, 41, 86_400).unwrap();
+        assert_eq!(contract.get_risk_assessment(204).unwrap().risk_level, RiskLevel::Medium);
+
+        // Score 60 → Medium (upper bound)
+        contract.update_risk_assessment(205, 60, 60, 60, 60, 86_400).unwrap();
+        assert_eq!(contract.get_risk_assessment(205).unwrap().risk_level, RiskLevel::Medium);
+
+        // Score 61 → Low (lower bound)
+        contract.update_risk_assessment(206, 61, 61, 61, 61, 86_400).unwrap();
+        assert_eq!(contract.get_risk_assessment(206).unwrap().risk_level, RiskLevel::Low);
+
+        // Score 80 → Low (upper bound)
+        contract.update_risk_assessment(207, 80, 80, 80, 80, 86_400).unwrap();
+        assert_eq!(contract.get_risk_assessment(207).unwrap().risk_level, RiskLevel::Low);
+
+        // Score 81 → VeryLow (lower bound)
+        contract.update_risk_assessment(208, 81, 81, 81, 81, 86_400).unwrap();
+        assert_eq!(contract.get_risk_assessment(208).unwrap().risk_level, RiskLevel::VeryLow);
+
+        // Score 100 → VeryLow (upper bound)
+        contract.update_risk_assessment(209, 100, 100, 100, 100, 86_400).unwrap();
+        assert_eq!(contract.get_risk_assessment(209).unwrap().risk_level, RiskLevel::VeryLow);
+    }
+
+    // =========================================================================
     // PREMIUM CALCULATION TESTS
     // =========================================================================
 

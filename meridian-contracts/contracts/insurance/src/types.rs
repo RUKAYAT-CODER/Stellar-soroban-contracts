@@ -210,6 +210,24 @@ pub struct RiskPool {
     pub early_withdrawal_penalty_bps: u32,
 }
 
+/// Holds the result of a property risk assessment.
+///
+/// # Score Semantics (higher score = lower risk)
+///
+/// Every score field in this struct represents property **quality** on a 0–100
+/// scale, where higher values are *better*:
+///
+/// | Score Range | Meaning                        |
+/// |-------------|-------------------------------|
+/// | 0–20        | Poor — very high risk          |
+/// | 21–40       | Below average — high risk      |
+/// | 41–60       | Average — medium risk          |
+/// | 61–80       | Good — low risk                |
+/// | 81–100      | Excellent — very low risk      |
+///
+/// The [`overall_risk_score`] is the average of the four sub-scores and is
+/// converted to a [`RiskLevel`] by
+/// [`PropertyInsurance::confidence_score_to_risk_level`].
 #[derive(Debug, Clone, PartialEq, scale::Encode, scale::Decode, ink::storage::traits::StorageLayout)]
 #[cfg_attr(feature = "std", derive(scale_info::TypeInfo))]
 pub struct RiskAssessment {
