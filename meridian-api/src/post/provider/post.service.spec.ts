@@ -76,6 +76,8 @@ describe('PostsService', () => {
     postRepository = {
       find: jest.fn(),
       delete: jest.fn(),
+      softDelete: jest.fn(),
+      restore: jest.fn(),
       create: jest.fn((dto) => ({ id: 10, ...dto })),
       save: jest.fn(async (post) => post),
       findOneBy: jest.fn(),
@@ -114,10 +116,10 @@ describe('PostsService', () => {
   });
 
   describe('deleteOne', () => {
-    it('deletes a post by id and returns the deletion summary', async () => {
-      postRepository.delete.mockResolvedValue({ affected: 1 });
+    it('soft-deletes a post by id and returns the deletion summary', async () => {
+      postRepository.softDelete.mockResolvedValue({ affected: 1 });
       const result = await service.deleteOne(10);
-      expect(postRepository.delete).toHaveBeenCalledWith(10);
+      expect(postRepository.softDelete).toHaveBeenCalledWith(10);
       expect(result).toEqual({ deleted: true, id: 10 });
     });
   });
