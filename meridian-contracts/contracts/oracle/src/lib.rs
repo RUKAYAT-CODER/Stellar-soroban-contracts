@@ -228,6 +228,17 @@ mod propchain_oracle {
         /// Maximum number of properties to process in a single batch operation
         const MAX_BATCH_SIZE: usize = 10;
 
+        /// Maximum number of historical valuations returned by a single
+        /// `get_historical_valuations` query.
+        ///
+        /// The caller-supplied `limit` is clamped to this value so a request
+        /// can never force unbounded iteration over the stored history,
+        /// bounding the gas/compute of a read. It matches the retention cap in
+        /// [`store_historical_valuation`], which keeps at most the 100 most
+        /// recent valuations per property, so the effective result is also the
+        /// most a property can ever hold.
+        const MAX_HISTORICAL_LIMIT: u32 = 100;
+
         /// Set the risk pool address that receives slashed funds (admin only)
         #[ink(message)]
         pub fn set_risk_pool(&mut self, risk_pool: AccountId) -> Result<(), OracleError> {
@@ -533,19 +544,32 @@ mod propchain_oracle {
             false
         }
 
-        /// Get historical valuations for a property
+        /// Get historical valuations for a property, most recent first.
+        ///
+        /// `limit` is the maximum number of entries to return. It is clamped to
+        /// [`Self::MAX_HISTORICAL_LIMIT`], so passing a very large value (e.g.
+        /// `u32::MAX`) cannot force unbounded iteration — the call returns at
+        /// most `MAX_HISTORICAL_LIMIT` entries regardless.
+        ///
+        /// Performance: O(n) in the number of stored valuations for the
+        /// property, where n is bounded by the retention cap (100). The result
+        /// allocates a `Vec` of up to `min(limit, MAX_HISTORICAL_LIMIT)`
+        /// elements, so gas/compute is bounded independent of caller input.
         #[ink(message)]
         pub fn get_historical_valuations(
             &self,
             property_id: u64,
             limit: u32,
         ) -> Vec<PropertyValuation> {
+            // Clamp the requested limit so a caller cannot force iteration over
+            // an arbitrarily large slice of history (DoS / enumeration guard).
+            let capped_limit = limit.min(Self::MAX_HISTORICAL_LIMIT);
             self.historical_valuations
                 .get(&property_id)
                 .unwrap_or_default()
                 .into_iter()
                 .rev() // Most recent first
-                .take(limit as usize)
+                .take(capped_limit as usize)
                 .collect()
         }
 
@@ -1603,6 +1627,39 @@ mod oracle_tests {
         // Test with no history
         let history = oracle.get_historical_valuations(1, 10);
         assert_eq!(history.len(), 0);
+    }
+
+    #[ink::test]
+    fn test_get_historical_valuations_limit_is_capped() {
+        let mut oracle = setup_oracle();
+
+        // Store more valuations than the retention/return cap.
+        for i in 1..=105u128 {
+            let valuation = PropertyValuation {
+                property_id: 1,
+                valuation: 500_000 + i, // non-zero, slightly varying
+                confidence_score: 85,
+                sources_used: 3,
+                last_updated: ink::env::block_timestamp::<DefaultEnvironment>(),
+                valuation_method: ValuationMethod::MarketData,
+                confirmed_at_block: None,
+            };
+            oracle
+                .update_property_valuation(1, valuation)
+                .expect("update should succeed");
+        }
+
+        // A huge limit cannot force unbounded iteration: the result is clamped
+        // to MAX_HISTORICAL_LIMIT (which also equals the storage retention cap).
+        let capped = oracle.get_historical_valuations(1, u32::MAX);
+        assert_eq!(capped.len(), 100);
+
+        // Smaller limits are still honoured exactly.
+        assert_eq!(oracle.get_historical_valuations(1, 5).len(), 5);
+        assert_eq!(oracle.get_historical_valuations(1, 50).len(), 50);
+
+        // Results are most-recent-first (last stored valuation comes first).
+        assert_eq!(capped[0].valuation, 500_000 + 105);
     }
 
     #[ink::test]
