@@ -133,7 +133,8 @@ describe('UserService', () => {
   });
 
   it('deleteUser throws HttpException', async () => {
-    await expect(service.deleteUser()).rejects.toThrow(HttpException);
+    usersRepository.findOneBy.mockResolvedValueOnce(null);
+    await expect(service.deleteUser(999)).rejects.toThrow(HttpException);
   });
 
   it('createMany delegates to the createManyUserService', async () => {
