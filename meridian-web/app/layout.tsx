@@ -4,8 +4,11 @@ import { Analytics } from '@vercel/analytics/next'
 import './globals.css'
 import { ThemeProvider } from '@/components/theme-provider'
 
-const _geist = Geist({ subsets: ["latin"] });
-const _geistMono = Geist_Mono({ subsets: ["latin"] });
+// `display: 'swap'` keeps text visible with a fallback font while Geist
+// loads, so web fonts never block first paint / LCP. (next/font defaults to
+// swap; we set it explicitly to document the intent.)
+const _geist = Geist({ subsets: ["latin"], display: "swap" });
+const _geistMono = Geist_Mono({ subsets: ["latin"], display: "swap" });
 
 export const metadata: Metadata = {
   title: 'MERIDIAN - Where Effort Meets Value',
