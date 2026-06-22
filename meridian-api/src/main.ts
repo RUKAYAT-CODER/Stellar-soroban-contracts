@@ -6,6 +6,7 @@ import helmet from 'helmet';
 import { DataResponseInterceptor } from './common/interceptors/data-response.interceptor';
 import { ConfigService } from '@nestjs/config';
 import { validationExceptionFactory } from './common/exceptions/validation.exception';
+import { SanitizePipe } from './common/pipes/sanitize.pipe';
 
 async function bootstrap() {
   const app = await NestFactory.create(AppModule);
@@ -43,6 +44,9 @@ async function bootstrap() {
     origin: corsOrigin,
     credentials: true,
   });
+
+  // Sanitize all request body strings before validation to prevent XSS (issue #453).
+  app.useGlobalPipes(new SanitizePipe());
 
   // Set global validation pipes. The custom `exceptionFactory` reshapes
   // class-validator's flat `message: string[]` response into a structured
