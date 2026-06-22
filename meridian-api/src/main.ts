@@ -1,6 +1,6 @@
 import { NestFactory } from '@nestjs/core';
 import { AppModule } from './app.module';
-import { ValidationPipe } from '@nestjs/common';
+import { ValidationPipe, VersioningType } from '@nestjs/common';
 import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
 import helmet from 'helmet';
 import { DataResponseInterceptor } from './common/interceptors/data-response.interceptor';
@@ -42,6 +42,16 @@ async function bootstrap() {
   app.enableCors({
     origin: corsOrigin,
     credentials: true,
+  });
+
+  // Enable URI-based API versioning (issue #454).
+  // All existing routes remain accessible at their current paths.
+  // New routes should declare a @Version('1') decorator and be mounted
+  // under /api/v1/... for forward compatibility.
+  app.enableVersioning({
+    type: VersioningType.URI,
+    prefix: 'v',
+    defaultVersion: '1',
   });
 
   // Set global validation pipes. The custom `exceptionFactory` reshapes
