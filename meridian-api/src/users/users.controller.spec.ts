@@ -157,11 +157,13 @@ describe('UsersController (integration)', () => {
     expect(userService.createMany).toHaveBeenCalledWith(dto);
   });
 
-  it('DELETE /users responds with status 200', async () => {
+  it('DELETE /users/:id responds with status 200', async () => {
     const response = await request(app.getHttpServer())
-      .delete('/users')
+      .delete('/users/1')
       .expect(200);
+
     expect(response).toBeDefined();
+    expect(userService.deleteUser).toHaveBeenCalledWith(1);
   });
 
   it('PATCH /users updates user details', async () => {
