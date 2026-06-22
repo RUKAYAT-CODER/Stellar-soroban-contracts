@@ -265,6 +265,11 @@ mod property_token {
                 return Err(Error::Unauthorized);
             }
 
+            // Enforce compliance for both sender and recipient on ERC-721 transfers.
+            if !self.pass_compliance(from)? || !self.pass_compliance(to)? {
+                return Err(Error::ComplianceFailed);
+            }
+
             // Perform the transfer
             self.remove_token_from_owner(from, token_id)?;
             self.add_token_to_owner(to, token_id)?;
@@ -431,6 +436,11 @@ mod property_token {
             // Verify lengths match
             if ids.len() != amounts.len() {
                 return Err(Error::Unauthorized); // Using this as a general error for mismatched arrays
+            }
+
+            // Enforce compliance for both sender and recipient on ERC-1155 batch transfers.
+            if !self.pass_compliance(from)? || !self.pass_compliance(to)? {
+                return Err(Error::ComplianceFailed);
             }
 
             // Transfer each token
