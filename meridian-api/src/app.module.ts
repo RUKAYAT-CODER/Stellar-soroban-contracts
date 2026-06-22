@@ -25,6 +25,7 @@ import { TweetModule } from './tweets/tweet.module';
 import { UploadModule } from './upload/upload.module';
 import { HealthModule } from './health/health.module';
 import { PrometheusModule } from '@willsoto/nestjs-prometheus';
+import { AuditModule } from './audit/audit.module';
 
 @Module({
   imports: [
@@ -97,6 +98,7 @@ import { PrometheusModule } from '@willsoto/nestjs-prometheus';
     UploadModule,
     HealthModule,
     PrometheusModule.register(),
+    AuditModule,
   ],
 
   controllers: [AppController],
