@@ -35,6 +35,7 @@
     "@willsoto/nestjs-prometheus": "^6.1.0",
     "bcrypt": "^5.1.1",
     "class-transformer": "^0.5.1",
+    "joi": "^17.13.3",
     "class-validator": "^0.14.1",
     "helmet": "^8.2.0",
     "mysql2": "^3.11.5",
