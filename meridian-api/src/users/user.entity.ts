@@ -9,6 +9,7 @@ import {
   OneToOne,
   JoinColumn,
   DeleteDateColumn,
+  Index,
 } from 'typeorm';
 
 @Entity()
@@ -22,6 +23,7 @@ export class User {
   @Column('varchar', { length: 100 })
   lastName: string;
 
+  @Index()
   @Column('varchar', { unique: true, nullable: false })
   email: string;
 

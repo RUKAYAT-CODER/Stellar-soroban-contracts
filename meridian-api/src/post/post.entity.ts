@@ -8,6 +8,7 @@ import {
   ManyToMany,
   JoinTable,
   DeleteDateColumn,
+  Index,
 } from 'typeorm';
 import { postType } from './Enums/post-type.enum';
 import { PostStatus } from './Enums/post-status.enum';
@@ -16,6 +17,7 @@ import { User } from 'src/users/user.entity';
 import { Tag } from 'src/tag/tag.entity';
 
 @Entity()
+@Index(['authorId', 'postType', 'postStatus'])
 export class Post {
   @PrimaryGeneratedColumn()
   id: number;

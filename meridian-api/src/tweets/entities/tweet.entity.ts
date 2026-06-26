@@ -9,9 +9,11 @@ import {
   PrimaryColumn,
   PrimaryGeneratedColumn,
   UpdateDateColumn,
+  Index,
 } from 'typeorm';
 
 @Entity()
+@Index(['userId'])
 export class Tweet {
   @PrimaryGeneratedColumn()
   id: number;
