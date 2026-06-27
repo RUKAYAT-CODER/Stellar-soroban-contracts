@@ -25,7 +25,7 @@ export class AuthController {
   constructor(private readonly authService: AuthService) {}
 
   @Post('/sign-in')
-  @Throttle({ default: { limit: 5, ttl: 15000 } })
+  @Throttle({ write: { limit: 5, ttl: 15000 } })
   @HttpCode(HttpStatus.OK)
   @ApiOperation({ summary: 'Sign in with user credentials' })
   @ApiResponse({
@@ -42,7 +42,7 @@ export class AuthController {
   }
 
   @Post('/refresh-token')
-  @Throttle({ default: { limit: 10, ttl: 60000 } })
+  @Throttle({ write: { limit: 10, ttl: 60000 } })
   @HttpCode(HttpStatus.OK)
   @ApiOperation({ summary: 'Refresh Auth Token' })
   @ApiResponse({ status: 200, description: 'Successfully refreshed token' })
@@ -97,7 +97,7 @@ export class AuthController {
   }
 
   @Post('/verify-email')
-  @Throttle({ default: { limit: 10, ttl: 60000 } })
+  @Throttle({ write: { limit: 10, ttl: 60000 } })
   @HttpCode(HttpStatus.OK)
   @ApiOperation({
     summary: 'Verify email with one-time token from signup mail',
@@ -113,7 +113,7 @@ export class AuthController {
   }
 
   @Post('/resend-verification')
-  @Throttle({ default: { limit: 3, ttl: 60000 } })
+  @Throttle({ write: { limit: 3, ttl: 60000 } })
   @HttpCode(HttpStatus.OK)
   @ApiOperation({ summary: 'Resend the email verification mail' })
   @ApiResponse({

@@ -4,6 +4,7 @@ import { TypeOrmModule } from '@nestjs/typeorm';
 import { JwtModule } from '@nestjs/jwt';
 import { ThrottlerModule, ThrottlerGuard } from '@nestjs/throttler';
 import { APP_INTERCEPTOR, APP_GUARD } from '@nestjs/core';
+import { CustomThrottlerGuard } from './common/guards/custom-throttler.guard';
 import { DataSource } from 'typeorm';
 
 import { AppController } from './app.controller';
@@ -50,8 +51,14 @@ import { AuditModule } from './audit/audit.module';
      */
     ThrottlerModule.forRoot([
       {
+        name: 'read',
         ttl: 60000,
-        limit: 10,
+        limit: 100, // 100 requests per minute for GET
+      },
+      {
+        name: 'write',
+        ttl: 60000,
+        limit: 20, // 20 requests per minute for POST/PUT/PATCH/DELETE
       },
     ]),
 
@@ -117,7 +124,7 @@ import { AuditModule } from './audit/audit.module';
     },
     {
       provide: APP_GUARD,
-      useClass: ThrottlerGuard,
+      useClass: CustomThrottlerGuard,
     },
     AccessTokenGuard,
     MailProvider,
